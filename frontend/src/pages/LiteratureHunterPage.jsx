@@ -4,7 +4,9 @@ import {
   exportPaperAsDocx,
   exportPaperAsPdf,
   searchLiterature,
+  savePaperToGraph,
 } from "../services/literatureHunter";
+import { useAuth } from "../hooks/useAuth";
 
 function buildPaperClipboardText(topic, paper) {
   const authors = paper.authors?.length ? paper.authors.join(", ") : "Unknown authors";
@@ -24,6 +26,7 @@ function buildPaperClipboardText(topic, paper) {
 }
 
 function LiteratureHunterPage() {
+  const { userEmail } = useAuth();
   const [topic, setTopic] = useState("");
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState("idle");
@@ -45,7 +48,7 @@ function LiteratureHunterPage() {
     setMessage("Searching Semantic Scholar and preparing normalized paper results.");
 
     try {
-      const response = await searchLiterature({ topic: normalizedTopic, limit: 10 });
+      const response = await searchLiterature({ topic: normalizedTopic, limit: 10, user_email: userEmail });
       setResults(response.papers);
       setStatus(response.status === "completed" ? "success" : "idle");
       setMessage(response.message);
@@ -87,6 +90,29 @@ function LiteratureHunterPage() {
     } catch (exportError) {
       setError(exportError.message || `Unable to export ${format.toUpperCase()} file.`);
     } finally {
+      setActionState((current) => ({ ...current, [paper.paper_id]: "" }));
+    }
+  }
+
+  async function handleSave(paper) {
+    if (!userEmail) {
+      setError("You must be logged in to save papers.");
+      return;
+    }
+    
+    setActionState((current) => ({ ...current, [paper.paper_id]: "saving" }));
+    setError("");
+
+    try {
+      await savePaperToGraph({
+        user_email: userEmail,
+        topic: topic.trim(),
+        paper: paper
+      });
+      setMessage(`Saved "${paper.title}" to your graph memory.`);
+      setActionState((current) => ({ ...current, [paper.paper_id]: "saved" }));
+    } catch (saveError) {
+      setError(saveError.message || "Failed to save paper to graph.");
       setActionState((current) => ({ ...current, [paper.paper_id]: "" }));
     }
   }
@@ -134,60 +160,63 @@ function LiteratureHunterPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[0.8fr_2fr]">
-          <aside className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Session State</p>
-                <h2 className="mt-2 text-lg font-semibold text-ink">Current Search</h2>
-              </div>
-              <dl className="space-y-4 text-sm text-slate-600">
-                <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                  <dt className="text-xs uppercase tracking-[0.2em] text-muted">Topic</dt>
-                  <dd className="mt-2 break-words text-base font-medium text-ink">
-                    {topic.trim() || "No topic entered yet"}
-                  </dd>
-                </div>
-                <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                  <dt className="text-xs uppercase tracking-[0.2em] text-muted">Results</dt>
-                  <dd className="mt-2 text-3xl font-semibold tracking-tight text-ink">{results.length}</dd>
-                </div>
-                <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                  <dt className="text-xs uppercase tracking-[0.2em] text-muted">Status</dt>
-                  <dd className="mt-2 text-base font-medium capitalize text-ink">{status}</dd>
-                </div>
-              </dl>
+        <section className="grid gap-8 lg:grid-cols-[0.8fr_2fr]">
+          <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel h-fit sticky top-8">
+          <div className="space-y-6">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Session State</p>
+              <h2 className="mt-2 text-lg font-bold text-slate-900">Current Search</h2>
             </div>
-          </aside>
+            <dl className="space-y-4">
+              {[
+                { label: "Topic", value: topic.trim() || "No topic entered yet", large: false },
+                { label: "Results", value: results.length, large: true },
+                { label: "Status", value: status, large: false },
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{item.label}</dt>
+                  <dd className={`mt-1 font-semibold text-slate-800 ${item.large ? 'text-3xl tracking-tight' : 'text-sm'}`}>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </aside>
 
-          <section className="space-y-4">
-            <div className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
-              <p className="text-sm leading-7 text-slate-600">{message}</p>
-              {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
+        <section className="space-y-6">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel">
+            <div className="flex items-center gap-3">
+              <div className={`h-2 w-2 rounded-full ${status === 'loading' ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`} />
+              <p className="text-sm font-bold text-slate-700">{message}</p>
             </div>
+            {error ? <p className="mt-3 text-sm font-bold text-red-600">{error}</p> : null}
+          </div>
 
-            {results.length ? (
-              <div className="grid gap-4 xl:grid-cols-2">
-                {results.map((paper) => (
-                  <PaperResultCard
-                    key={paper.paper_id}
-                    paper={paper}
-                    actionState={actionState[paper.paper_id]}
-                    onCopy={() => handleCopy(paper)}
-                    onExportPdf={() => handleExport(paper, "pdf")}
-                    onExportDocx={() => handleExport(paper, "docx")}
-                  />
-                ))}
+          {results.length ? (
+            <div className="grid gap-6 xl:grid-cols-2">
+              {results.map((paper) => (
+                <PaperResultCard
+                  key={paper.paper_id}
+                  paper={paper}
+                  actionState={actionState[paper.paper_id]}
+                  onCopy={() => handleCopy(paper)}
+                  onExportPdf={() => handleExport(paper, "pdf")}
+                  onExportDocx={() => handleExport(paper, "docx")}
+                  onSave={() => handleSave(paper)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[32px] border border-dashed border-slate-200 bg-white/50 p-16 text-center shadow-sm">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-slate-300">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               </div>
-            ) : (
-              <div className="rounded-[28px] border border-dashed border-line bg-white/60 p-12 text-center shadow-panel-soft">
-                <p className="text-lg font-medium text-ink">No papers to display yet.</p>
-                <p className="mt-2 text-sm leading-7 text-slate-500">
-                  Run Literature Hunter with a topic to fetch live results from the backend.
-                </p>
-              </div>
-            )}
-          </section>
+              <p className="text-xl font-bold text-slate-800">No papers results yet.</p>
+              <p className="mt-2 text-sm leading-7 text-slate-500 font-medium">
+                Run Literature Hunter with a topic to fetch live results from academic databases.
+              </p>
+            </div>
+          )}
+        </section>
         </section>
     </div>
   );

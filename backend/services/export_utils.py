@@ -604,3 +604,262 @@ def generate_planner_section_docx(topic: str, title: str, items: Sequence[Any]) 
         archive.writestr("word/_rels/document.xml.rels", document_rels_xml)
 
     return buffer.getvalue()
+def generate_full_planner_pdf(topic: str, sections: Mapping[str, Sequence[Any]]) -> bytes:
+    normalized_topic = topic.strip()
+    if not normalized_topic:
+        raise ValueError("topic must not be empty.")
+
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "Research Intelligence Report",
+        f"Research Topic: {normalized_topic}",
+        f"Generated: {generated_at}",
+        "",
+        "---",
+        "",
+    ]
+
+    # Map for known internal keys to friendly display titles
+    display_mapping = {
+        "subtopics": "Subtopics",
+        "search_keywords": "Search Keywords",
+        "possible_methods": "Possible Methods",
+        "likely_datasets": "Likely Datasets",
+        "summary": "Summary",
+        "methods_used": "Methods Used",
+        "datasets_mentioned": "Datasets Mentioned",
+        "key_findings": "Key Findings",
+        "common_evidence": "Common Evidence",
+        "differing_methods": "Differing Methods",
+        "differing_datasets": "Differing Datasets",
+        "evidence_clusters": "Evidence Clusters",
+        "consensus_trends": "Consensus Trends",
+        "contradiction_found": "Contradiction Found",
+        "conflicting_statements": "Conflicting Statements",
+        "confidence_level": "Confidence Level",
+        "explanation": "Explanation",
+        "identified_gaps": "Identified Gaps",
+        "underexplored_areas": "Underexplored Areas",
+        "future_directions": "Future Directions",
+        "novelty_opportunities": "Novelty Opportunities",
+    }
+
+    for key, items in sections.items():
+        if not items and key not in ["summary", "explanation", "contradiction_found", "confidence_level"]:
+            continue
+            
+        display_title = display_mapping.get(key, key.replace("_", " ").title())
+        lines.append(display_title.upper())
+        lines.append("-" * len(display_title))
+        
+        if not items:
+            lines.append("No findings identified for this section.")
+        else:
+            for index, item in enumerate(items, start=1):
+                prefix = f"{index}. " if len(items) > 1 else ""
+                lines.extend(_wrap_line(f"{prefix}{item}"))
+        
+        lines.append("")
+        lines.append("")
+
+
+    lines_per_page = 46
+    pages = [lines[index : index + lines_per_page] for index in range(0, len(lines), lines_per_page)] or [[]]
+
+    objects: dict[int, bytes] = {}
+    page_object_ids: list[int] = []
+    font_object_id = 3
+
+    for page_index, page_lines in enumerate(pages):
+        page_object_id = 4 + (page_index * 2)
+        content_object_id = page_object_id + 1
+        page_object_ids.append(page_object_id)
+
+        commands = ["BT", "/F1 11 Tf", "14 TL", "50 770 Td"]
+        for line in page_lines:
+            commands.append(f"({_escape_pdf_text(line)}) Tj")
+            commands.append("T*")
+        commands.append("ET")
+
+        stream = "\n".join(commands).encode("latin-1", errors="replace")
+        objects[content_object_id] = (
+            f"<< /Length {len(stream)} >>\nstream\n".encode("latin-1")
+            + stream
+            + b"\nendstream"
+        )
+        objects[page_object_id] = (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            f"/Resources << /Font << /F1 {font_object_id} 0 R >> >> "
+            f"/Contents {content_object_id} 0 R >>"
+        ).encode("latin-1")
+
+    objects[1] = b"<< /Type /Catalog /Pages 2 0 R >>"
+    page_refs = " ".join(f"{page_id} 0 R" for page_id in page_object_ids)
+    objects[2] = f"<< /Type /Pages /Count {len(page_object_ids)} /Kids [{page_refs}] >>".encode("latin-1")
+    objects[3] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+
+    for object_id in range(1, max(objects) + 1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{object_id} 0 obj\n".encode("latin-1"))
+        pdf.extend(objects[object_id])
+        pdf.extend(b"\nendobj\n")
+
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {len(offsets)}\n".encode("latin-1"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010} 00000 n \n".encode("latin-1"))
+
+    pdf.extend(
+        (
+            "trailer\n"
+            f"<< /Size {len(offsets)} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("latin-1")
+    )
+
+    return bytes(pdf)
+
+
+def generate_full_planner_docx(topic: str, sections: Mapping[str, Sequence[Any]]) -> bytes:
+    normalized_topic = topic.strip()
+    if not normalized_topic:
+        raise ValueError("topic must not be empty.")
+
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    paragraphs = [
+        _docx_paragraph("Research Intelligence Report", "Heading1"),
+        _docx_paragraph(f"Research Topic: {normalized_topic}"),
+        _docx_paragraph(f"Generated: {generated_at}"),
+    ]
+
+    # Map for known internal keys to friendly display titles
+    display_mapping = {
+        "subtopics": "Subtopics",
+        "search_keywords": "Search Keywords",
+        "possible_methods": "Possible Methods",
+        "likely_datasets": "Likely Datasets",
+        "summary": "Summary",
+        "methods_used": "Methods Used",
+        "datasets_mentioned": "Datasets Mentioned",
+        "key_findings": "Key Findings",
+        "common_evidence": "Common Evidence",
+        "differing_methods": "Differing Methods",
+        "differing_datasets": "Differing Datasets",
+        "evidence_clusters": "Evidence Clusters",
+        "consensus_trends": "Consensus Trends",
+        "contradiction_found": "Contradiction Found",
+        "conflicting_statements": "Conflicting Statements",
+        "confidence_level": "Confidence Level",
+        "explanation": "Explanation",
+        "identified_gaps": "Identified Gaps",
+        "underexplored_areas": "Underexplored Areas",
+        "future_directions": "Future Directions",
+        "novelty_opportunities": "Novelty Opportunities",
+    }
+
+    for key, items in sections.items():
+        if not items and key not in ["summary", "explanation", "contradiction_found", "confidence_level"]:
+            continue
+
+        display_title = display_mapping.get(key, key.replace("_", " ").title())
+        paragraphs.append(_docx_paragraph("", "Normal"))
+        paragraphs.append(_docx_paragraph(display_title, "Heading1"))
+        
+        if not items:
+            paragraphs.append(_docx_paragraph("No findings identified for this section."))
+        else:
+            for index, item in enumerate(items, start=1):
+                prefix = f"{index}. " if len(items) > 1 else ""
+                paragraphs.append(_docx_paragraph(f"{prefix}{item}", "Heading2"))
+
+
+    document_xml = (
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        "<w:document xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" "
+        "xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" "
+        "xmlns:o=\"urn:schemas-microsoft-com:office:office\" "
+        "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" "
+        "xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" "
+        "xmlns:v=\"urn:schemas-microsoft-com:vml\" "
+        "xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" "
+        "xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" "
+        "xmlns:w10=\"urn:schemas-microsoft-com:office:word\" "
+        "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" "
+        "xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" "
+        "xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" "
+        "xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" "
+        "xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" "
+        "xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\" "
+        "mc:Ignorable=\"w14 wp14\">"
+        "<w:body>"
+        f"{''.join(paragraphs)}"
+        "<w:sectPr>"
+        "<w:pgSz w:w=\"12240\" w:h=\"15840\"/>"
+        "<w:pgMar w:top=\"1440\" w:right=\"1440\" w:bottom=\"1440\" w:left=\"1440\" "
+        "w:header=\"708\" w:footer=\"708\" w:gutter=\"0\"/>"
+        "</w:sectPr>"
+        "</w:body>"
+        "</w:document>"
+    )
+
+    styles_xml = (
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        "<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+        "<w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\">"
+        "<w:name w:val=\"Normal\"/><w:qFormat/>"
+        "</w:style>"
+        "<w:style w:type=\"paragraph\" w:styleId=\"Heading1\">"
+        "<w:name w:val=\"heading 1\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/>"
+        "<w:rPr><w:b/><w:sz w:val=\"32\"/></w:rPr>"
+        "</w:style>"
+        "<w:style w:type=\"paragraph\" w:styleId=\"Heading2\">"
+        "<w:name w:val=\"heading 2\"/><w:basedOn w:val=\"Normal\"/><w:qFormat/>"
+        "<w:rPr><w:b/><w:sz w:val=\"26\"/></w:rPr>"
+        "</w:style>"
+        "</w:styles>"
+    )
+
+    content_types_xml = (
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+        "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+        "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+        "<Override PartName=\"/word/document.xml\" "
+        "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
+        "<Override PartName=\"/word/styles.xml\" "
+        "ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>"
+        "</Types>"
+    )
+
+    package_rels_xml = (
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+        "<Relationship Id=\"rId1\" "
+        "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" "
+        "Target=\"word/document.xml\"/>"
+        "</Relationships>"
+    )
+
+    document_rels_xml = (
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+        "<Relationship Id=\"rId1\" "
+        "Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" "
+        "Target=\"styles.xml\"/>"
+        "</Relationships>"
+    )
+
+    buffer = BytesIO()
+    with ZipFile(buffer, mode="w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", content_types_xml)
+        archive.writestr("_rels/.rels", package_rels_xml)
+        archive.writestr("word/document.xml", document_xml)
+        archive.writestr("word/styles.xml", styles_xml)
+        archive.writestr("word/_rels/document.xml.rels", document_rels_xml)
+
+    return buffer.getvalue()

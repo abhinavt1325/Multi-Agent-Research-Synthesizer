@@ -13,7 +13,7 @@ async function parseError(response) {
   return `Request failed with status ${response.status}.`;
 }
 
-export async function searchLiterature({ topic, limit = 10 }) {
+export async function searchLiterature({ topic, limit = 10, user_email }) {
   const response = await fetch(`${API_BASE_URL}/literature-hunter`, {
     method: "POST",
     headers: {
@@ -22,7 +22,7 @@ export async function searchLiterature({ topic, limit = 10 }) {
     body: JSON.stringify({
       research_question: topic,
       context: [],
-      filters: { limit },
+      filters: { limit, user_email },
     }),
   });
 
@@ -80,4 +80,24 @@ export function exportPaperAsDocx({ topic, paper }) {
     endpoint: "/literature-hunter/export/docx",
     fallbackName: "literature-hunter.docx",
   });
+}
+
+export async function savePaperToGraph({ user_email, topic, paper }) {
+  const response = await fetch(`${API_BASE_URL}/literature-hunter/save`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      user_email,
+      topic,
+      paper,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  return response.json();
 }

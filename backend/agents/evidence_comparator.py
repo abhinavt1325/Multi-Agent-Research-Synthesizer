@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GEMINI_GENERATE_CONTENT_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.1-flash:generateContent"
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
 )
 REQUEST_TIMEOUT_SECONDS = 30
 

@@ -23,6 +23,8 @@ try:
         generate_paper_list_docx,
         generate_planner_section_docx,
         generate_planner_section_pdf,
+        generate_full_planner_docx,
+        generate_full_planner_pdf,
         generate_research_summary_pdf,
     )
 except ModuleNotFoundError:  # pragma: no cover - supports execution from backend/
@@ -40,6 +42,8 @@ except ModuleNotFoundError:  # pragma: no cover - supports execution from backen
         generate_paper_list_docx,
         generate_planner_section_docx,
         generate_planner_section_pdf,
+        generate_full_planner_docx,
+        generate_full_planner_pdf,
         generate_research_summary_pdf,
     )
 
@@ -70,6 +74,9 @@ class DashboardSummaryResponse(BaseModel):
     llm_providers: list[str]
     agent_routes: list[AgentRouteDescriptor]
     active_agents: int
+    papers_count: int
+    graph_nodes: int
+    relationships: int
 
 
 class RecentPaperItemResponse(BaseModel):
@@ -170,6 +177,11 @@ class PlannerSectionExportRequest(BaseModel):
     items: list[str] = Field(default_factory=list)
 
 
+class FullPlannerExportRequest(BaseModel):
+    topic: str = Field(..., min_length=1)
+    sections: dict[str, list[str]] = Field(default_factory=dict)
+
+
 class LiteraturePaperResponse(BaseModel):
     title: str
     abstract: str
@@ -178,6 +190,8 @@ class LiteraturePaperResponse(BaseModel):
     citation_count: int
     source: str
     paper_id: str
+    url: str | None = None
+    pdf_url: str | None = None
 
 
 class LiteratureHunterExportOptions(BaseModel):
@@ -208,6 +222,17 @@ class LiteratureHunterResponse(BaseModel):
 class LiteratureHunterExportRequest(BaseModel):
     topic: str = Field(..., min_length=1)
     papers: list[LiteraturePaperResponse] = Field(default_factory=list)
+
+
+class SavePaperRequest(BaseModel):
+    user_email: str = Field(..., min_length=1)
+    topic: str = Field(..., min_length=1)
+    paper: LiteraturePaperResponse
+
+
+class SavePaperResponse(BaseModel):
+    status: str
+    detail: str
 
 
 AGENT_ROUTE_DESCRIPTORS = [
@@ -339,12 +364,55 @@ async def planner_export_docx(request: PlannerSectionExportRequest) -> Response:
     )
 
 
+@api_router.post("/planner/export-full/pdf")
+async def planner_export_full_pdf(request: FullPlannerExportRequest) -> Response:
+    try:
+        pdf_content = generate_full_planner_pdf(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("planner-full", request.topic, "pdf")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/planner/export-full/docx")
+async def planner_export_full_docx(request: FullPlannerExportRequest) -> Response:
+    try:
+        docx_content = generate_full_planner_docx(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("planner-full", request.topic, "docx")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=docx_content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @api_router.post("/literature-hunter", response_model=LiteratureHunterResponse)
 async def literature_hunter_agent(request: ResearchAgentRequest) -> LiteratureHunterResponse:
     try:
         result = run_literature_hunter(
             research_topic=request.research_question,
             limit=_extract_result_limit(request.filters),
+            user_email=request.filters.get("user_email")
         )
     except ValueError as exc:
         raise HTTPException(
@@ -400,6 +468,74 @@ async def literature_hunter_export_docx(request: LiteratureHunterExportRequest) 
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@api_router.post("/literature-hunter/save", response_model=SavePaperResponse)
+async def save_paper_to_graph_endpoint(request: SavePaperRequest) -> SavePaperResponse:
+    try:
+        try:
+            from backend.neo4j.queries import (
+                GraphQueryError,
+                build_topic_id,
+                create_paper_node,
+                create_topic_node,
+                link_paper_to_topic,
+                log_user_search,
+            )
+        except ModuleNotFoundError:
+            from neo4j.queries import (
+                GraphQueryError,
+                build_topic_id,
+                create_paper_node,
+                create_topic_node,
+                link_paper_to_topic,
+                log_user_search,
+            )
+            
+        paper = request.paper
+        topic_id = build_topic_id(request.topic)
+        
+        # 1. Ensure Topic exists
+        create_topic_node(
+            topic_id=topic_id,
+            name=request.topic,
+            description=f"Research topic explored via Literature Hunter",
+            metadata={"source": paper.source}
+        )
+        
+        # 2. Ensure User is linked to Topic
+        log_user_search(user_email=request.user_email, topic_id=topic_id)
+        
+        # 3. Create Paper node with source_url
+        create_paper_node(
+            paper_id=paper.paper_id,
+            title=paper.title,
+            abstract=paper.abstract or None,
+            publication_year=paper.year,
+            source=paper.source,
+            source_url=paper.url,
+            metadata={
+                "authors": paper.authors,
+                "citation_count": paper.citation_count,
+                "source_url": paper.url,
+                "pdf_url": paper.pdf_url
+            },
+        )
+        
+        # 4. Link Topic to Paper
+        link_paper_to_topic(paper_id=paper.paper_id, topic_id=topic_id)
+        
+    except GraphQueryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save paper to topic graph.",
+        ) from exc
+    return SavePaperResponse(status="success", detail="Paper saved to topic memory.")
 
 
 @api_router.post("/paper-reader", response_model=PaperReaderResponse)
@@ -464,6 +600,49 @@ async def paper_reader_export_docx(request: PlannerSectionExportRequest) -> Resp
     )
 
 
+@api_router.post("/paper-reader/export-full/pdf")
+async def paper_reader_export_full_pdf(request: FullPlannerExportRequest) -> Response:
+    try:
+        pdf_content = generate_full_planner_pdf(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("paper-analysis", request.topic, "pdf")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/paper-reader/export-full/docx")
+async def paper_reader_export_full_docx(request: FullPlannerExportRequest) -> Response:
+    try:
+        docx_content = generate_full_planner_docx(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("paper-analysis", request.topic, "docx")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=docx_content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+
 @api_router.post("/evidence-comparator", response_model=EvidenceComparatorResponse)
 async def evidence_comparator_agent(request: EvidenceComparatorRequest) -> EvidenceComparatorResponse:
     try:
@@ -526,6 +705,49 @@ async def evidence_comparator_export_docx(request: PlannerSectionExportRequest) 
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@api_router.post("/evidence-comparator/export-full/pdf")
+async def evidence_comparator_export_full_pdf(request: FullPlannerExportRequest) -> Response:
+    try:
+        pdf_content = generate_full_planner_pdf(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("evidence-summary", request.topic, "pdf")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/evidence-comparator/export-full/docx")
+async def evidence_comparator_export_full_docx(request: FullPlannerExportRequest) -> Response:
+    try:
+        docx_content = generate_full_planner_docx(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("evidence-summary", request.topic, "docx")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=docx_content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 
 
 @api_router.post("/contradiction-detector", response_model=ContradictionDetectorResponse)
@@ -593,6 +815,49 @@ async def contradiction_detector_export_docx(request: PlannerSectionExportReques
     )
 
 
+@api_router.post("/contradiction-detector/export-full/pdf")
+async def contradiction_detector_export_full_pdf(request: FullPlannerExportRequest) -> Response:
+    try:
+        pdf_content = generate_full_planner_pdf(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("contradiction-report", request.topic, "pdf")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/contradiction-detector/export-full/docx")
+async def contradiction_detector_export_full_docx(request: FullPlannerExportRequest) -> Response:
+    try:
+        docx_content = generate_full_planner_docx(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("contradiction-report", request.topic, "docx")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=docx_content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+
 @api_router.post("/research-gap", response_model=ResearchGapResponse)
 async def research_gap_agent(request: ResearchGapRequest) -> ResearchGapResponse:
     try:
@@ -658,6 +923,49 @@ async def research_gap_export_docx(request: PlannerSectionExportRequest) -> Resp
     )
 
 
+@api_router.post("/research-gap/export-full/pdf")
+async def research_gap_export_full_pdf(request: FullPlannerExportRequest) -> Response:
+    try:
+        pdf_content = generate_full_planner_pdf(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("research-gap-analysis", request.topic, "pdf")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/research-gap/export-full/docx")
+async def research_gap_export_full_docx(request: FullPlannerExportRequest) -> Response:
+    try:
+        docx_content = generate_full_planner_docx(
+            topic=request.topic,
+            sections=request.sections,
+        )
+        filename = build_named_export_filename("research-gap-analysis", request.topic, "docx")
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return Response(
+        content=docx_content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+
 @api_router.get("/dashboard-summary", response_model=DashboardSummaryResponse)
 async def dashboard_summary() -> DashboardSummaryResponse:
     settings = get_settings()
@@ -670,6 +978,24 @@ async def dashboard_summary() -> DashboardSummaryResponse:
         if configured
     ]
 
+    # Initialize fallback data
+    counts = {
+        "papers_count": 0,
+        "graph_nodes": 0,
+        "relationships": 0
+    }
+
+    try:
+        try:
+            from backend.neo4j.queries import fetch_graph_summary_counts
+        except ModuleNotFoundError:
+            from neo4j.queries import fetch_graph_summary_counts
+        
+        counts = fetch_graph_summary_counts()
+    except Exception:
+        # Silently fallback to zeros if Neo4j read fails
+        pass
+
     return DashboardSummaryResponse(
         entry_point="dashboard",
         graph_reusability="Shared graph data is exposed through a dedicated graph-data contract for all modules.",
@@ -677,6 +1003,9 @@ async def dashboard_summary() -> DashboardSummaryResponse:
         llm_providers=llm_providers,
         agent_routes=AGENT_ROUTE_DESCRIPTORS,
         active_agents=len(AGENT_ROUTE_DESCRIPTORS),
+        papers_count=counts.get("papers_count", 0),
+        graph_nodes=counts.get("graph_nodes", 0),
+        relationships=counts.get("relationships", 0),
     )
 
 
@@ -700,11 +1029,11 @@ async def recent_papers() -> RecentPapersResponse:
 
     try:
         papers = fetch_recent_papers(limit=10)
-    except GraphQueryError:
+    except Exception:
         return RecentPapersResponse(
-            status="error",
+            status="ok",
             papers=[],
-            detail="Recent papers could not be loaded from Neo4j.",
+            detail="Recent papers record is currently empty or unavailable.",
         )
 
     return RecentPapersResponse(
@@ -742,34 +1071,33 @@ async def graph_data() -> GraphDataResponse:
 
     try:
         graph_payload = fetch_graph_data()
-    except GraphQueryError:
         return GraphDataResponse(
-            status="error",
-            papers_count=None,
-            total_nodes=None,
-            total_relationships=None,
-            topics_count=None,
-            methods_count=None,
-            datasets_count=None,
-            gaps_count=None,
+            status="ok",
+            papers_count=graph_payload["papers_count"],
+            total_nodes=graph_payload["total_nodes"],
+            total_relationships=graph_payload["total_relationships"],
+            topics_count=graph_payload["topics_count"],
+            methods_count=graph_payload["methods_count"],
+            datasets_count=graph_payload["datasets_count"],
+            gaps_count=graph_payload["gaps_count"],
+            nodes=graph_payload["nodes"],
+            edges=graph_payload["edges"],
+            detail="Graph data loaded from Neo4j.",
+        )
+    except Exception:
+        return GraphDataResponse(
+            status="ok",
+            papers_count=0,
+            total_nodes=0,
+            total_relationships=0,
+            topics_count=0,
+            methods_count=0,
+            datasets_count=0,
+            gaps_count=0,
             nodes=[],
             edges=[],
-            detail="Graph data could not be loaded from Neo4j.",
+            detail="Graph data is currently empty or unavailable.",
         )
-
-    return GraphDataResponse(
-        status="ok",
-        papers_count=graph_payload["papers_count"],
-        total_nodes=graph_payload["total_nodes"],
-        total_relationships=graph_payload["total_relationships"],
-        topics_count=graph_payload["topics_count"],
-        methods_count=graph_payload["methods_count"],
-        datasets_count=graph_payload["datasets_count"],
-        gaps_count=graph_payload["gaps_count"],
-        nodes=graph_payload["nodes"],
-        edges=graph_payload["edges"],
-        detail="Graph data loaded from Neo4j.",
-    )
 
 from fastapi import Body
 import sqlite3

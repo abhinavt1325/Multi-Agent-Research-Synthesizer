@@ -2,10 +2,11 @@ import { useState } from "react";
 import FileUploadZone from "../components/FileUploadZone";
 import PlannerSectionCard from "../components/PlannerSectionCard";
 import {
-  exportPaperReaderSectionAsDocx,
-  exportPaperReaderSectionAsPdf,
+  exportFullPaperReaderAsDocx,
+  exportFullPaperReaderAsPdf,
   runPaperReader,
 } from "../services/paperReader";
+
 
 const SECTION_DEFINITIONS = [
   { key: "summary", title: "Summary", transform: (result) => (result.summary ? [result.summary] : []) },
@@ -82,24 +83,32 @@ function PaperReaderPage() {
     }
   }
 
-  async function handleExport(sectionTitle, items, sectionKey, format) {
-    const exportTopic = paperText.trim().slice(0, 80) || "paper-reader";
-    setActionState((current) => ({ ...current, [sectionKey]: format }));
+  async function handleFullExport(format) {
+    if (!result) return;
+    const exportTopic = actionState.topic || "paper-analysis";
+    setActionState((prev) => ({ ...prev, globalExport: format }));
     setError("");
 
     try {
+      // Build sections mapping for backend
+      const sections = {};
+      SECTION_DEFINITIONS.forEach((def) => {
+        sections[def.key] = def.transform(result);
+      });
+
       if (format === "pdf") {
-        await exportPaperReaderSectionAsPdf({ topic: exportTopic, sectionTitle, items });
+        await exportFullPaperReaderAsPdf({ topic: exportTopic, sections });
       } else {
-        await exportPaperReaderSectionAsDocx({ topic: exportTopic, sectionTitle, items });
+        await exportFullPaperReaderAsDocx({ topic: exportTopic, sections });
       }
-      setMessage(`Prepared ${format.toUpperCase()} export for ${sectionTitle.toLowerCase()}.`);
-    } catch (exportError) {
-      setError(exportError.message || `Unable to export ${format.toUpperCase()} file.`);
+      setMessage(`Consolidated research report exported as ${format.toUpperCase()}.`);
+    } catch (err) {
+      setError(err.message || "Export failed.");
     } finally {
-      setActionState((current) => ({ ...current, [sectionKey]: "" }));
+      setActionState((prev) => ({ ...prev, globalExport: "" }));
     }
   }
+
 
   const sectionCount = result
     ? SECTION_DEFINITIONS.reduce((total, section) => total + section.transform(result).length, 0)
@@ -189,64 +198,91 @@ function PaperReaderPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[0.8fr_2fr]">
-        <aside className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
-          <div className="space-y-4">
+        <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel h-fit sticky top-8">
+          <div className="space-y-6">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Session State</p>
-              <h2 className="mt-2 text-lg font-semibold text-ink">Current Analysis</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Session State</p>
+              <h2 className="mt-2 text-lg font-bold text-slate-900">Current Analysis</h2>
             </div>
-            <dl className="space-y-4 text-sm text-slate-600">
-              <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                <dt className="text-xs uppercase tracking-[0.2em] text-muted">Text Length</dt>
-                <dd className="mt-2 text-3xl font-semibold tracking-tight text-ink">{paperText.trim().length}</dd>
-              </div>
-              <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                <dt className="text-xs uppercase tracking-[0.2em] text-muted">Input Mode</dt>
-                <dd className="mt-2 text-base font-medium capitalize text-ink">{inputMode}</dd>
-              </div>
-              <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                <dt className="text-xs uppercase tracking-[0.2em] text-muted">Provider</dt>
-                <dd className="mt-2 text-base font-medium capitalize text-ink">{provider || "Not run yet"}</dd>
-              </div>
-              <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                <dt className="text-xs uppercase tracking-[0.2em] text-muted">Total Items</dt>
-                <dd className="mt-2 text-3xl font-semibold tracking-tight text-ink">{sectionCount}</dd>
-              </div>
-              <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                <dt className="text-xs uppercase tracking-[0.2em] text-muted">Status</dt>
-                <dd className="mt-2 text-base font-medium capitalize text-ink">{status}</dd>
-              </div>
+            <dl className="space-y-4">
+              {[
+                { label: "Text Length", value: paperText.trim().length, large: true },
+                { label: "Input Mode", value: inputMode, large: false },
+                { label: "Provider", value: provider || "Not run yet", large: false },
+                { label: "Total Items", value: sectionCount, large: false },
+                { label: "Status", value: status, large: false },
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{item.label}</dt>
+                  <dd className={`mt-1 font-semibold text-slate-800 ${item.large ? 'text-3xl' : 'text-sm'}`}>{item.value}</dd>
+                </div>
+              ))}
             </dl>
           </div>
         </aside>
 
-        <section className="space-y-4">
-          <div className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
-            <p className="text-sm leading-7 text-slate-600">{message}</p>
-            {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
+        <section className="space-y-6">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel">
+            <div className="flex items-center gap-3">
+              <div className={`h-2 w-2 rounded-full ${status === 'loading' ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`} />
+              <p className="text-sm font-bold text-slate-700">{message}</p>
+            </div>
+            {error ? <p className="mt-3 text-sm font-bold text-red-600">{error}</p> : null}
           </div>
 
           {result ? (
-            <div className="grid gap-4 xl:grid-cols-2">
-              {SECTION_DEFINITIONS.map((section) => {
-                const items = section.transform(result);
-                return (
-                  <PlannerSectionCard
-                    key={section.key}
-                    title={section.title}
-                    items={items}
-                    actionState={actionState[section.key]}
-                    onCopy={() => handleCopy(section.title, items, section.key)}
-                    onExportPdf={() => handleExport(section.title, items, section.key, "pdf")}
-                    onExportDocx={() => handleExport(section.title, items, section.key, "docx")}
-                  />
-                );
-              })}
+            <div className="space-y-8">
+              <div className="grid gap-6 xl:grid-cols-2">
+                {SECTION_DEFINITIONS.map((section) => {
+                  const items = section.transform(result);
+                  return (
+                    <PlannerSectionCard
+                      key={section.key}
+                      title={section.title}
+                      items={items}
+                      actionState={actionState[section.key]}
+                      onCopy={() => handleCopy(section.title, items, section.key)}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Unified Export Area */}
+              <div className="overflow-hidden rounded-[32px] border border-slate-900 bg-slate-950 p-8 shadow-2xl text-white">
+                <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
+                  <div className="space-y-1 text-center sm:text-left">
+                    <h3 className="text-xl font-bold">Consolidated Research Report</h3>
+                    <p className="text-sm text-slate-400">Download the full analysis as a structured document.</p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <button
+                      onClick={() => handleFullExport("pdf")}
+                      disabled={actionState.globalExport === "pdf"}
+                      className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      {actionState.globalExport === "pdf" ? "Exporting PDF..." : "Export PDF"}
+                    </button>
+                    <button
+                      onClick={() => handleFullExport("docx")}
+                      disabled={actionState.globalExport === "docx"}
+                      className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/20 active:scale-95 disabled:opacity-50"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      {actionState.globalExport === "docx" ? "Exporting DOCX..." : "Export DOCX"}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
+
           ) : (
-            <div className="rounded-[28px] border border-dashed border-line bg-white/60 p-12 text-center shadow-panel-soft">
-              <p className="text-lg font-medium text-ink">No paper analysis yet.</p>
-              <p className="mt-2 text-sm leading-7 text-slate-500">
+            <div className="rounded-[32px] border border-dashed border-slate-200 bg-white/50 p-16 text-center shadow-sm">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-slate-300">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </div>
+              <p className="text-xl font-bold text-slate-800">No paper analysis yet.</p>
+              <p className="mt-2 text-sm leading-7 text-slate-500 font-medium">
                 Paste text or upload a PDF/DOCX/TXT file and run Paper Reader.
               </p>
             </div>

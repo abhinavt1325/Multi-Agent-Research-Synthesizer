@@ -1,32 +1,27 @@
 from __future__ import annotations
 
 import logging
+import re
+import uuid
 from typing import Any
 
 try:
     from neo4j import Driver
     from neo4j.exceptions import Neo4jError, ServiceUnavailable
-except ModuleNotFoundError:  # pragma: no cover - import-safe when dependency is absent
+except ModuleNotFoundError:  # pragma: no cover
     Driver = Any  # type: ignore[assignment]
-
-    class Neo4jError(Exception):
-        """Fallback Neo4j base exception when the dependency is unavailable."""
-
-    class ServiceUnavailable(Neo4jError):
-        """Fallback service-unavailable exception."""
+    class Neo4jError(Exception): pass
+    class ServiceUnavailable(Neo4jError): pass
 
 try:
     from backend.neo4j.connection import get_neo4j_driver
-except ModuleNotFoundError:  # pragma: no cover - supports execution from backend/
+except ModuleNotFoundError:
     from .connection import get_neo4j_driver
-
 
 LOGGER = logging.getLogger(__name__)
 
-
 class GraphQueryError(RuntimeError):
     """Raised when a graph query cannot be completed safely."""
-
 
 def _require_non_empty(value: str, field_name: str) -> str:
     cleaned = value.strip()
@@ -56,7 +51,7 @@ def create_topic_node(
             ELSE $description
         END,
         topic.metadata = CASE
-            WHEN size(keys($metadata)) = 0 THEN topic.metadata
+            WHEN size(keys($metadata_dict)) = 0 THEN topic.metadata
             ELSE $metadata
         END,
         topic.updated_at = datetime()
@@ -64,7 +59,7 @@ def create_topic_node(
         .topic_id,
         .name,
         .description,
-        metadata: coalesce(topic.metadata, {}),
+        metadata: coalesce(topic.metadata, "{}"),
         created_at: toString(topic.created_at),
         updated_at: CASE
             WHEN topic.updated_at IS NULL THEN NULL
@@ -72,12 +67,14 @@ def create_topic_node(
         END
     } AS topic
     """
-
+    import json
+    metadata_val = metadata or {}
     params = {
         "topic_id": _require_non_empty(topic_id, "topic_id"),
         "name": _require_non_empty(name, "name"),
         "description": description.strip() if description else None,
-        "metadata": metadata or {},
+        "metadata_dict": metadata_val,
+        "metadata": json.dumps(metadata_val),
     }
 
     active_driver = driver or get_neo4j_driver()
@@ -102,6 +99,7 @@ def create_paper_node(
     doi: str | None = None,
     publication_year: int | None = None,
     source: str | None = None,
+    source_url: str | None = None,
     metadata: dict[str, Any] | None = None,
     driver: Driver | None = None,
 ) -> dict[str, Any]:
@@ -113,30 +111,19 @@ def create_paper_node(
         paper.doi = $doi,
         paper.publication_year = $publication_year,
         paper.source = $source,
+        paper.source_url = $source_url,
+        paper.pdf_url = $pdf_url,
         paper.metadata = $metadata,
         paper.created_at = datetime()
     ON MATCH SET
         paper.title = $title,
-        paper.abstract = CASE
-            WHEN $abstract IS NULL THEN paper.abstract
-            ELSE $abstract
-        END,
-        paper.doi = CASE
-            WHEN $doi IS NULL THEN paper.doi
-            ELSE $doi
-        END,
-        paper.publication_year = CASE
-            WHEN $publication_year IS NULL THEN paper.publication_year
-            ELSE $publication_year
-        END,
-        paper.source = CASE
-            WHEN $source IS NULL THEN paper.source
-            ELSE $source
-        END,
-        paper.metadata = CASE
-            WHEN size(keys($metadata)) = 0 THEN paper.metadata
-            ELSE $metadata
-        END,
+        paper.abstract = CASE WHEN $abstract IS NOT NULL THEN $abstract ELSE paper.abstract END,
+        paper.doi = CASE WHEN $doi IS NOT NULL THEN $doi ELSE paper.doi END,
+        paper.publication_year = CASE WHEN $publication_year IS NOT NULL THEN $publication_year ELSE paper.publication_year END,
+        paper.source = CASE WHEN $source IS NOT NULL THEN $source ELSE paper.source END,
+        paper.source_url = CASE WHEN $source_url IS NOT NULL THEN $source_url ELSE paper.source_url END,
+        paper.pdf_url = CASE WHEN $pdf_url IS NOT NULL THEN $pdf_url ELSE paper.pdf_url END,
+        paper.metadata = CASE WHEN size(keys($metadata_dict)) > 0 THEN $metadata ELSE paper.metadata END,
         paper.updated_at = datetime()
     RETURN paper {
         .paper_id,
@@ -145,23 +132,26 @@ def create_paper_node(
         .doi,
         .publication_year,
         .source,
-        metadata: coalesce(paper.metadata, {}),
+        .source_url,
+        .pdf_url,
+        metadata: coalesce(paper.metadata, "{}"),
         created_at: toString(paper.created_at),
-        updated_at: CASE
-            WHEN paper.updated_at IS NULL THEN NULL
-            ELSE toString(paper.updated_at)
-        END
+        updated_at: CASE WHEN paper.updated_at IS NULL THEN NULL ELSE toString(paper.updated_at) END
     } AS paper
     """
-
+    import json
+    metadata_val = metadata or {}
     params = {
-        "paper_id": _require_non_empty(paper_id, "paper_id"),
-        "title": _require_non_empty(title, "title"),
+        "paper_id": paper_id.strip() if paper_id else title.strip(),
+        "title": title.strip() if title else "Untitled Paper",
         "abstract": abstract.strip() if abstract else None,
         "doi": doi.strip() if doi else None,
         "publication_year": publication_year,
         "source": source.strip() if source else None,
-        "metadata": metadata or {},
+        "source_url": source_url or metadata_val.get("url") or metadata_val.get("source_url"),
+        "pdf_url": metadata_val.get("pdf_url"),
+        "metadata_dict": metadata_val,
+        "metadata": json.dumps(metadata_val)
     }
 
     active_driver = driver or get_neo4j_driver()
@@ -179,15 +169,23 @@ def create_paper_node(
     return dict(record["paper"])
 
 
+def build_topic_id(research_topic: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", research_topic.lower()).strip("-")
+    suffix = uuid.uuid5(uuid.NAMESPACE_URL, research_topic.lower()).hex[:12]
+    return f"topic-{slug[:64]}-{suffix}" if slug else f"topic-{suffix}"
+
+
 def link_paper_to_topic(
     paper_id: str,
     topic_id: str,
     driver: Driver | None = None,
 ) -> dict[str, str]:
+    # Bi-directional consistency: Topic owns papers semantically
     cypher = """
     MATCH (paper:Paper {paper_id: $paper_id})
     MATCH (topic:Topic {topic_id: $topic_id})
-    MERGE (paper)-[relationship:HAS_TOPIC]->(topic)
+    MERGE (topic)-[relationship:HAS_PAPER]->(paper)
+    MERGE (paper)-[:HAS_TOPIC]->(topic)
     ON CREATE SET relationship.created_at = datetime()
     RETURN paper.paper_id AS paper_id, topic.topic_id AS topic_id
     """
@@ -215,54 +213,89 @@ def link_paper_to_topic(
     }
 
 
+def log_user_search(
+    user_email: str,
+    topic_id: str,
+    driver: Driver | None = None,
+) -> dict[str, str]:
+    cypher = """
+    MATCH (topic:Topic {topic_id: $topic_id})
+    MERGE (user:User {email: $user_email})
+    MERGE (user)-[relationship:SEARCHED_TOPIC]->(topic)
+    ON CREATE SET relationship.created_at = datetime()
+    RETURN user.email AS user_email, topic.topic_id AS topic_id
+    """
+
+    params = {
+        "user_email": _require_non_empty(user_email, "user_email"),
+        "topic_id": _require_non_empty(topic_id, "topic_id"),
+    }
+
+    active_driver = driver or get_neo4j_driver()
+
+    try:
+        with active_driver.session() as session:
+            record = session.run(cypher, params).single()
+    except (ServiceUnavailable, Neo4jError, RuntimeError) as exc:
+        LOGGER.exception("Failed to log User search relationship.")
+        raise GraphQueryError("Failed to log User search relationship.") from exc
+
+    if not record:
+        raise GraphQueryError("User or Topic node was not found for linking.")
+
+    return {
+        "user_email": record["user_email"],
+        "topic_id": record["topic_id"],
+    }
+
+
+def save_paper_for_user(
+    user_email: str,
+    paper_id: str,
+    driver: Driver | None = None,
+) -> dict[str, str]:
+    cypher = """
+    MATCH (paper:Paper {paper_id: $paper_id})
+    MERGE (user:User {email: $user_email})
+    MERGE (user)-[relationship:SAVED]->(paper)
+    ON CREATE SET relationship.created_at = datetime()
+    RETURN user.email AS user_email, paper.paper_id AS paper_id
+    """
+
+    params = {
+        "user_email": _require_non_empty(user_email, "user_email"),
+        "paper_id": _require_non_empty(paper_id, "paper_id"),
+    }
+
+    active_driver = driver or get_neo4j_driver()
+
+    try:
+        with active_driver.session() as session:
+            record = session.run(cypher, params).single()
+    except (ServiceUnavailable, Neo4jError, RuntimeError) as exc:
+        LOGGER.exception("Failed to log User saved paper relationship.")
+        raise GraphQueryError("Failed to log User saved paper relationship.") from exc
+
+    if not record:
+        raise GraphQueryError("User or Paper node was not found for linking.")
+
+    return {
+        "user_email": record["user_email"],
+        "paper_id": record["paper_id"],
+    }
+
+
 def fetch_graph_summary_counts(driver: Driver | None = None) -> dict[str, int]:
     cypher = """
-    CALL {
-        MATCH (node:Topic)
-        RETURN count(node) AS topics
-    }
-    CALL {
-        MATCH (node:Paper)
-        RETURN count(node) AS papers
-    }
-    CALL {
-        MATCH (node:Author)
-        RETURN count(node) AS authors
-    }
-    CALL {
-        MATCH (node:Method)
-        RETURN count(node) AS methods
-    }
-    CALL {
-        MATCH (node:Dataset)
-        RETURN count(node) AS datasets
-    }
-    CALL {
-        MATCH (node:Contradiction)
-        RETURN count(node) AS contradictions
-    }
-    CALL {
-        MATCH (node:Gap)
-        RETURN count(node) AS gaps
-    }
-    CALL {
-        MATCH ()-[relationship]->()
-        RETURN count(relationship) AS total_relationships
-    }
-    CALL {
-        MATCH (:Paper)-[relationship:HAS_TOPIC]->(:Topic)
-        RETURN count(relationship) AS paper_topic_links
-    }
+    MATCH (n)
+    WITH count(n) AS total_nodes
+    OPTIONAL MATCH (p:Paper)
+    WITH total_nodes, count(p) AS papers
+    OPTIONAL MATCH ()-[r]->()
     RETURN {
-        topics: topics,
-        papers: papers,
-        authors: authors,
-        methods: methods,
-        datasets: datasets,
-        contradictions: contradictions,
-        gaps: gaps,
-        total_relationships: total_relationships,
-        paper_topic_links: paper_topic_links
+        papers_count: papers,
+        graph_nodes: total_nodes,
+        relationships: count(r)
     } AS summary
     """
 
@@ -276,7 +309,11 @@ def fetch_graph_summary_counts(driver: Driver | None = None) -> dict[str, int]:
         raise GraphQueryError("Failed to fetch graph summary counts.") from exc
 
     if not record:
-        raise GraphQueryError("Neo4j did not return graph summary counts.")
+        return {
+            "papers_count": 0,
+            "graph_nodes": 0,
+            "relationships": 0
+        }
 
     summary = dict(record["summary"])
     return {key: int(value) for key, value in summary.items()}
@@ -328,7 +365,7 @@ def fetch_recent_papers(limit: int = 10, driver: Driver | None = None) -> list[d
 
 
 def fetch_graph_data(driver: Driver | None = None) -> dict[str, int]:
-    allowed_labels = ["Topic", "Paper", "Method", "Dataset", "Gap"]
+    allowed_labels = ["Topic", "Paper", "Method", "Dataset", "Gap", "User"]
     cypher = """
     CALL {
         MATCH (node)
@@ -365,8 +402,11 @@ def fetch_graph_data(driver: Driver | None = None) -> dict[str, int]:
         RETURN collect(
             DISTINCT {
                 node_id: elementId(node),
+                id: elementId(node),
                 label: head([label IN labels(node) WHERE label IN allowed_labels]),
+                type: head([label IN labels(node) WHERE label IN allowed_labels]),
                 display_name: CASE
+                    WHEN "User" IN labels(node) THEN coalesce(node.name, node.email, "Anonymous User")
                     WHEN "Topic" IN labels(node) THEN coalesce(node.name, node.topic_id, "Unnamed Topic")
                     WHEN "Paper" IN labels(node) THEN coalesce(node.title, node.paper_id, "Untitled Paper")
                     WHEN "Method" IN labels(node) THEN coalesce(node.name, node.method_id, "Unnamed Method")
@@ -387,8 +427,11 @@ def fetch_graph_data(driver: Driver | None = None) -> dict[str, int]:
             DISTINCT {
                 edge_id: elementId(relationship),
                 source_id: elementId(source),
+                source: elementId(source),
                 target_id: elementId(target),
-                relationship_type: type(relationship)
+                target: elementId(target),
+                relationship_type: type(relationship),
+                relation: type(relationship)
             }
         ) AS visualization_edges
     }
@@ -419,6 +462,17 @@ def fetch_graph_data(driver: Driver | None = None) -> dict[str, int]:
 
     raw_graph_data = dict(record["graph_data"])
 
+    nodes: list[dict[str, Any]] = []
+    for node in raw_graph_data.get("nodes", []):
+        # Ensure all property values in 'details' are JSON serializable
+        details = node.get("details", {})
+        for key, value in details.items():
+            # Check for common Neo4j non-serializable types (DateTime, etc)
+            if hasattr(value, "__class__") and "neo4j" in str(value.__class__):
+                details[key] = str(value)
+        node["details"] = details
+        nodes.append(node)
+
     return {
         "total_nodes": int(raw_graph_data["total_nodes"]),
         "total_relationships": int(raw_graph_data["total_relationships"]),
@@ -427,7 +481,7 @@ def fetch_graph_data(driver: Driver | None = None) -> dict[str, int]:
         "methods_count": int(raw_graph_data["methods_count"]),
         "datasets_count": int(raw_graph_data["datasets_count"]),
         "gaps_count": int(raw_graph_data["gaps_count"]),
-        "nodes": list(raw_graph_data.get("nodes", [])),
+        "nodes": nodes,
         "edges": list(raw_graph_data.get("edges", [])),
     }
 

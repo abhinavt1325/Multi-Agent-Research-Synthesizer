@@ -31,19 +31,7 @@ export async function runEvidenceComparator({ summaries }) {
   return response.json();
 }
 
-async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }) {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      topic,
-      section_title: sectionTitle,
-      items,
-    }),
-  });
-
+async function handleDownload(response, fallbackName) {
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
@@ -62,6 +50,36 @@ async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic,
+      section_title: sectionTitle,
+      items,
+    }),
+  });
+  return handleDownload(response, fallbackName);
+}
+
+async function exportFullFile({ topic, sections, endpoint, fallbackName }) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic,
+      sections,
+    }),
+  });
+  return handleDownload(response, fallbackName);
+}
+
 
 export function exportEvidenceSectionAsPdf({ topic, sectionTitle, items }) {
   return exportFile({
@@ -82,3 +100,22 @@ export function exportEvidenceSectionAsDocx({ topic, sectionTitle, items }) {
     fallbackName: "evidence-comparator-section.docx",
   });
 }
+
+export function exportFullEvidenceAsPdf({ topic, sections }) {
+  return exportFullFile({
+    topic,
+    sections,
+    endpoint: "/evidence-comparator/export-full/pdf",
+    fallbackName: "evidence-summary.pdf",
+  });
+}
+
+export function exportFullEvidenceAsDocx({ topic, sections }) {
+  return exportFullFile({
+    topic,
+    sections,
+    endpoint: "/evidence-comparator/export-full/docx",
+    fallbackName: "evidence-summary.docx",
+  });
+}
+

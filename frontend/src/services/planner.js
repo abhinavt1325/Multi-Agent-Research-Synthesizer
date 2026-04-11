@@ -84,3 +84,57 @@ export function exportPlannerSectionAsDocx({ topic, sectionTitle, items }) {
     fallbackName: "planner-section.docx",
   });
 }
+
+export async function exportFullPlannerAsPdf({ topic, sections }) {
+  const response = await fetch(`${API_BASE_URL}/planner/export-full/pdf`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ topic, sections }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  const blob = await response.blob();
+  const contentDisposition = response.headers.get("Content-Disposition");
+  const filename = contentDisposition?.match(/filename="(.+)"/i)?.[1] || "planner-report.pdf";
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportFullPlannerAsDocx({ topic, sections }) {
+  const response = await fetch(`${API_BASE_URL}/planner/export-full/docx`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ topic, sections }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  const blob = await response.blob();
+  const contentDisposition = response.headers.get("Content-Disposition");
+  const filename = contentDisposition?.match(/filename="(.+)"/i)?.[1] || "planner-report.docx";
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

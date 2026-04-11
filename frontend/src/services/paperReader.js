@@ -31,19 +31,7 @@ export async function runPaperReader({ paperText }) {
   return response.json();
 }
 
-async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }) {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      topic,
-      section_title: sectionTitle,
-      items,
-    }),
-  });
-
+async function handleDownload(response, fallbackName) {
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
@@ -62,6 +50,36 @@ async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic,
+      section_title: sectionTitle,
+      items,
+    }),
+  });
+  return handleDownload(response, fallbackName);
+}
+
+async function exportFullFile({ topic, sections, endpoint, fallbackName }) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic,
+      sections,
+    }),
+  });
+  return handleDownload(response, fallbackName);
+}
+
 
 export function exportPaperReaderSectionAsPdf({ topic, sectionTitle, items }) {
   return exportFile({
@@ -82,3 +100,22 @@ export function exportPaperReaderSectionAsDocx({ topic, sectionTitle, items }) {
     fallbackName: "paper-reader-section.docx",
   });
 }
+
+export function exportFullPaperReaderAsPdf({ topic, sections }) {
+  return exportFullFile({
+    topic,
+    sections,
+    endpoint: "/paper-reader/export-full/pdf",
+    fallbackName: "paper-analysis.pdf",
+  });
+}
+
+export function exportFullPaperReaderAsDocx({ topic, sections }) {
+  return exportFullFile({
+    topic,
+    sections,
+    endpoint: "/paper-reader/export-full/docx",
+    fallbackName: "paper-analysis.docx",
+  });
+}
+

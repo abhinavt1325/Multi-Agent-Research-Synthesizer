@@ -63,7 +63,7 @@ def _is_aura_hostname(hostname: str | None) -> bool:
     return any(normalized_hostname.endswith(suffix) for suffix in AURA_HOST_SUFFIXES)
 
 
-def _build_driver_config(uri: str) -> dict[str, Any]:
+def _build_driver_config(uri: str) -> tuple[str, dict[str, Any]]:
     parsed_uri = urlparse(uri)
     scheme = parsed_uri.scheme.lower()
     hostname = parsed_uri.hostname
@@ -71,10 +71,19 @@ def _build_driver_config(uri: str) -> dict[str, Any]:
     if not scheme:
         raise RuntimeError("NEO4J_URI must include a valid URI scheme such as neo4j+s://.")
 
-    if _is_aura_hostname(hostname) and scheme not in {"neo4j+s", "bolt+s"}:
+    if _is_aura_hostname(hostname) and scheme not in {"neo4j+s", "bolt+s", "neo4j", "bolt"}:
         raise RuntimeError(
             "Neo4j Aura requires a CA-validated secure URI. Use neo4j+s:// (or bolt+s://) for Aura connections.",
         )
+
+    # To fix Windows CA errors with neo4j+s, we downgrade the scheme to standard neo4j/bolt 
+    # to manually inject the global certifi root certificates.
+    if scheme == "neo4j+s":
+        uri = uri.replace("neo4j+s", "neo4j", 1)
+        scheme = "neo4j"
+    elif scheme == "bolt+s":
+        uri = uri.replace("bolt+s", "bolt", 1)
+        scheme = "bolt"
 
     driver_config: dict[str, Any] = {
         "max_connection_lifetime": 3600,
@@ -86,9 +95,14 @@ def _build_driver_config(uri: str) -> dict[str, Any]:
 
     if scheme in {"neo4j", "bolt"} and TrustSystemCAs is not None:
         driver_config["encrypted"] = True
-        driver_config["trusted_certificates"] = TrustSystemCAs()
+        try:
+            import certifi
+            from neo4j import TrustCustomCAs
+            driver_config["trusted_certificates"] = TrustCustomCAs(certifi.where())
+        except ImportError:
+            driver_config["trusted_certificates"] = TrustSystemCAs()
 
-    return driver_config
+    return uri, driver_config
 
 
 @lru_cache(maxsize=1)
@@ -96,8 +110,8 @@ def get_neo4j_driver() -> Driver:
     if GraphDatabase is None:
         raise RuntimeError("The neo4j package is not installed. Install the official neo4j Python driver.")
 
-    uri, username, password = _require_connection_settings()
-    driver_config = _build_driver_config(uri)
+    raw_uri, username, password = _require_connection_settings()
+    uri, driver_config = _build_driver_config(raw_uri)
 
     try:
         return GraphDatabase.driver(

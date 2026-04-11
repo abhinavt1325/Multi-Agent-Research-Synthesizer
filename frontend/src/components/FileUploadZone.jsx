@@ -68,8 +68,7 @@ async function extractText(file) {
  * Props:
  *   label       string  – field label shown above zone
  *   onTextExtracted  (text: string, fileName: string) => void
- *   disabled    bool
- *   className   string  – extra wrapper classes
+ *   disabled  *   className   string  – extra wrapper classes
  */
 export default function FileUploadZone({ label, onTextExtracted, disabled, className = "" }) {
   const inputRef = useRef(null);
@@ -128,9 +127,9 @@ export default function FileUploadZone({ label, onTextExtracted, disabled, class
   }
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-3 ${className}`}>
       {label && (
-        <span className="text-sm font-medium text-slate-200">{label}</span>
+        <span className="text-sm font-bold text-slate-700">{label}</span>
       )}
       <div
         role="button"
@@ -142,41 +141,49 @@ export default function FileUploadZone({ label, onTextExtracted, disabled, class
         onDragOver={handleDragOver}
         onDragLeave={() => setDragging(false)}
         className={[
-          "relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition",
+          "relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition",
           dragging
-            ? "border-white/60 bg-white/15 scale-[1.01]"
-            : "border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10",
+            ? "border-indigo-500 bg-indigo-50/30 scale-[1.01]"
+            : "border-slate-300 bg-slate-50/50 hover:border-slate-400 hover:bg-slate-50",
           disabled ? "cursor-not-allowed opacity-50" : "",
         ].join(" ")}
       >
         {/* Upload cloud icon */}
-        <svg
-          className={`h-8 w-8 transition ${dragging ? "text-white" : "text-slate-400"}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 16.5v-9m0 0-3.75 3.75M12 7.5l3.75 3.75M20.25 16.5A4.5 4.5 0 0 0 15.75 12H15a6 6 0 1 0-5.812 7.5"
-          />
-        </svg>
+        <div className={`rounded-full p-3 transition ${dragging ? "bg-indigo-100 text-indigo-600" : "bg-white text-slate-500 shadow-sm"}`}>
+          <svg
+            className="h-7 w-7"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 16.5v-9m0 0-3.75 3.75M12 7.5l3.75 3.75M20.25 16.5A4.5 4.5 0 0 0 15.75 12H15a6 6 0 1 0-5.812 7.5"
+            />
+          </svg>
+        </div>
 
         {processing ? (
-          <span className="text-sm text-slate-300">Extracting text…</span>
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-800" />
+            Extracting text…
+          </div>
         ) : fileName ? (
-          <span className="max-w-[90%] truncate text-sm font-medium text-emerald-300">
-            ✓ {fileName}
-          </span>
+          <div className="flex flex-col items-center gap-1">
+            <span className="max-w-[180px] truncate text-sm font-bold text-emerald-700">
+              {fileName}
+            </span>
+            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Successfully Loaded</span>
+          </div>
         ) : (
-          <div>
-            <p className="text-sm font-medium text-slate-200">
-              Drop file or{" "}
-              <span className="underline underline-offset-2">click to browse</span>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-slate-800">
+              Drop research paper or{" "}
+              <span className="text-indigo-600 underline underline-offset-4 decoration-2">browse files</span>
             </p>
-            <p className="mt-1 text-xs text-slate-400">PDF · DOCX · TXT — up to 10 MB</p>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">PDF · DOCX · TXT — up to 10 MB</p>
           </div>
         )}
 
@@ -191,7 +198,8 @@ export default function FileUploadZone({ label, onTextExtracted, disabled, class
       </div>
 
       {error && (
-        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-300">
+        <p className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           {error}
         </p>
       )}

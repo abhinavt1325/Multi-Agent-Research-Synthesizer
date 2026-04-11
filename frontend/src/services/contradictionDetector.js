@@ -32,19 +32,7 @@ export async function runContradictionDetector({ claimA, claimB }) {
   return response.json();
 }
 
-async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }) {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      topic,
-      section_title: sectionTitle,
-      items,
-    }),
-  });
-
+async function handleDownload(response, fallbackName) {
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
@@ -63,6 +51,36 @@ async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }
   anchor.remove();
   URL.revokeObjectURL(url);
 }
+
+async function exportFile({ topic, sectionTitle, items, endpoint, fallbackName }) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic,
+      section_title: sectionTitle,
+      items,
+    }),
+  });
+  return handleDownload(response, fallbackName);
+}
+
+async function exportFullFile({ topic, sections, endpoint, fallbackName }) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic,
+      sections,
+    }),
+  });
+  return handleDownload(response, fallbackName);
+}
+
 
 export function exportContradictionSectionAsPdf({ topic, sectionTitle, items }) {
   return exportFile({
@@ -83,3 +101,22 @@ export function exportContradictionSectionAsDocx({ topic, sectionTitle, items })
     fallbackName: "contradiction-detector-section.docx",
   });
 }
+
+export function exportFullContradictionAsPdf({ topic, sections }) {
+  return exportFullFile({
+    topic,
+    sections,
+    endpoint: "/contradiction-detector/export-full/pdf",
+    fallbackName: "contradiction-report.pdf",
+  });
+}
+
+export function exportFullContradictionAsDocx({ topic, sections }) {
+  return exportFullFile({
+    topic,
+    sections,
+    endpoint: "/contradiction-detector/export-full/docx",
+    fallbackName: "contradiction-report.docx",
+  });
+}
+

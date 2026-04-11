@@ -1,10 +1,13 @@
-# Python
+# --- Python ---
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 env/
+venv/
+.venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -17,50 +20,90 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-.venv
-venv/
-ENV/
+MANIFEST
 .pytest_cache/
 .coverage
 htmlcov/
+.noserc
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.cache
 .mypy_cache/
 .ruff_cache/
-*.log
+.python-version
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Node.js / Frontend
+# --- Node.js / Frontend ---
 node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/public/logo.jpg
+frontend/.next/
+frontend/out/
 dist-ssr/
+*.tsbuildinfo
 .eslintcache
+.stylelintcache
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# Databases and Local Data
+# --- Databases and Local Data ---
 backend/auth.db
 backend/chroma/
 *.sqlite3
 *.db
+*.log
+local_settings.py
 
-# Environment variables
+# --- Environment variables ---
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 backend/.env
 frontend/.env
 
-# IDEs
+# --- IDEs and Text Editors ---
 .vscode/
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
 
-# OS
+# --- OS ---
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# --- Archives ---
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
 

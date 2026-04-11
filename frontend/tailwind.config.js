@@ -4,20 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: "#f5f5f4",
-        panel: "#fafaf9",
-        ink: "#111827",
-        muted: "#6b7280",
-        line: "#e7e5e4",
-        accent: "#1f2937",
+        canvas: "#f8fafc",
+        panel: "#ffffff",
+        ink: "#0f172a",
+        muted: "#475569",
+        line: "#e2e8f0",
+        accent: "#1e293b",
       },
       boxShadow: {
-        "panel": "0 16px 45px -24px rgba(15, 23, 42, 0.26)",
-        "panel-soft": "0 10px 30px -22px rgba(15, 23, 42, 0.22)",
+        "panel": "0 20px 50px -20px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.04)",
+        "panel-soft": "0 10px 30px -15px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(15, 23, 42, 0.03)",
       },
       backgroundImage: {
         "paper-grid":
-          "radial-gradient(circle at top, rgba(255,255,255,0.82), rgba(245,245,244,0.92) 42%, rgba(231,229,228,0.84))",
+          "radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(248,250,252,0.98) 45%, rgba(241,245,249,0.9))",
       },
     },
   },

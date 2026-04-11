@@ -1,8 +1,8 @@
 import { useState } from "react";
 import PlannerSectionCard from "../components/PlannerSectionCard";
 import {
-  exportPlannerSectionAsDocx,
-  exportPlannerSectionAsPdf,
+  exportFullPlannerAsDocx,
+  exportFullPlannerAsPdf,
   runPlanner,
 } from "../services/planner";
 
@@ -73,21 +73,22 @@ function PlannerPage() {
     }
   }
 
-  async function handleExport(sectionTitle, items, sectionKey, format) {
-    setActionState((current) => ({ ...current, [sectionKey]: format }));
+  async function handleFullExport(format) {
+    if (!result) return;
+    setActionState((current) => ({ ...current, globalExport: format }));
     setError("");
 
     try {
       if (format === "pdf") {
-        await exportPlannerSectionAsPdf({ topic: topic.trim(), sectionTitle, items });
+        await exportFullPlannerAsPdf({ topic: topic.trim(), sections: result });
       } else {
-        await exportPlannerSectionAsDocx({ topic: topic.trim(), sectionTitle, items });
+        await exportFullPlannerAsDocx({ topic: topic.trim(), sections: result });
       }
-      setMessage(`Prepared ${format.toUpperCase()} export for ${sectionTitle.toLowerCase()}.`);
+      setMessage(`Research report exported as ${format.toUpperCase()}.`);
     } catch (exportError) {
-      setError(exportError.message || `Unable to export ${format.toUpperCase()} file.`);
+      setError(exportError.message || `Export failed.`);
     } finally {
-      setActionState((current) => ({ ...current, [sectionKey]: "" }));
+      setActionState((current) => ({ ...current, globalExport: "" }));
     }
   }
 
@@ -96,11 +97,11 @@ function PlannerPage() {
     : 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <section className="overflow-hidden rounded-[32px] border border-white/80 bg-slate-950 text-white shadow-panel">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 pb-12">
+        <section className="overflow-hidden rounded-[32px] border border-slate-800 bg-slate-950 text-white shadow-2xl">
           <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-10">
             <div className="space-y-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Research Planning</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Research Planning</p>
               <div className="space-y-3">
                 <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">Planner</h1>
                 <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
@@ -118,13 +119,13 @@ function PlannerPage() {
                     value={topic}
                     onChange={(event) => setTopic(event.target.value)}
                     placeholder="Example: autonomous scientific agents for literature review"
-                    className="w-full rounded-2xl border border-white/10 bg-white/90 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-white focus:ring-2 focus:ring-white/25"
+                    className="w-full rounded-2xl border border-white/10 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-white/20"
                   />
                 </label>
                 <button
                   type="submit"
                   disabled={status === "loading"}
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70 active:scale-[0.98]"
                 >
                   {status === "loading" ? "Running Planner..." : "Run Planner"}
                 </button>
@@ -133,65 +134,92 @@ function PlannerPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-[0.8fr_2fr]">
-          <aside className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
-            <div className="space-y-4">
+        <section className="grid gap-6 lg:grid-cols-[0.8fr_2fr]">
+          <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel h-fit sticky top-8">
+            <div className="space-y-6">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Session State</p>
-                <h2 className="mt-2 text-lg font-semibold text-ink">Current Plan</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Session State</p>
+                <h2 className="mt-2 text-lg font-bold text-slate-900">Current Plan</h2>
               </div>
-              <dl className="space-y-4 text-sm text-slate-600">
-                <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                  <dt className="text-xs uppercase tracking-[0.2em] text-muted">Topic</dt>
-                  <dd className="mt-2 break-words text-base font-medium text-ink">
-                    {topic.trim() || "No topic entered yet"}
-                  </dd>
-                </div>
-                <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                  <dt className="text-xs uppercase tracking-[0.2em] text-muted">Provider</dt>
-                  <dd className="mt-2 text-base font-medium capitalize text-ink">{provider || "Not run yet"}</dd>
-                </div>
-                <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                  <dt className="text-xs uppercase tracking-[0.2em] text-muted">Total Items</dt>
-                  <dd className="mt-2 text-3xl font-semibold tracking-tight text-ink">{sectionCount}</dd>
-                </div>
-                <div className="rounded-2xl border border-line/80 bg-white/70 p-4">
-                  <dt className="text-xs uppercase tracking-[0.2em] text-muted">Status</dt>
-                  <dd className="mt-2 text-base font-medium capitalize text-ink">{status}</dd>
-                </div>
+              <dl className="space-y-4">
+                {[
+                  { label: "Topic", value: topic.trim() || "No topic entered yet", large: false },
+                  { label: "Provider", value: provider || "Not run yet", large: false },
+                  { label: "Total Items", value: sectionCount, large: true },
+                  { label: "Status", value: status, large: false },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-slate-50">
+                    <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{item.label}</dt>
+                    <dd className={`mt-1 break-words font-semibold text-slate-800 ${item.large ? 'text-3xl tracking-tight' : 'text-sm'}`}>
+                      {item.value}
+                    </dd>
+                  </div>
+                ))}
               </dl>
             </div>
           </aside>
 
-          <section className="space-y-4">
-            <div className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
-              <p className="text-sm leading-7 text-slate-600">{message}</p>
-              {error ? <p className="mt-3 text-sm font-medium text-red-600">{error}</p> : null}
+          <section className="space-y-6">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel">
+              <div className="flex items-center gap-3">
+                <div className={`h-2 w-2 rounded-full ${status === 'loading' ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`} />
+                <p className="text-sm font-medium text-slate-700">{message}</p>
+              </div>
+              {error ? <p className="mt-4 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-600 border border-red-100">{error}</p> : null}
             </div>
 
             {result ? (
-              <div className="grid gap-4 xl:grid-cols-2">
-                {SECTION_DEFINITIONS.map((section) => {
-                  const items = result[section.key] || [];
+              <>
+                <div className="grid gap-6 xl:grid-cols-2">
+                  {SECTION_DEFINITIONS.map((section) => {
+                    const items = result[section.key] || [];
+                    return (
+                      <PlannerSectionCard
+                        key={section.key}
+                        title={section.title}
+                        items={items}
+                        actionState={actionState[section.key]}
+                        onCopy={() => handleCopy(section.title, items, section.key)}
+                      />
+                    );
+                  })}
+                </div>
 
-                  return (
-                    <PlannerSectionCard
-                      key={section.key}
-                      title={section.title}
-                      items={items}
-                      actionState={actionState[section.key]}
-                      onCopy={() => handleCopy(section.title, items, section.key)}
-                      onExportPdf={() => handleExport(section.title, items, section.key, "pdf")}
-                      onExportDocx={() => handleExport(section.title, items, section.key, "docx")}
-                    />
-                  );
-                })}
-              </div>
+                <div className="mt-8 overflow-hidden rounded-[32px] border border-slate-900 bg-slate-950 p-8 shadow-2xl text-white">
+                  <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
+                    <div className="space-y-1 text-center sm:text-left">
+                      <h3 className="text-xl font-bold">Consolidated Research Report</h3>
+                      <p className="text-sm text-slate-400">Download the full plan as a structured document.</p>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-3">
+                      <button
+                        onClick={() => handleFullExport("pdf")}
+                        disabled={actionState.globalExport === "pdf"}
+                        className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        {actionState.globalExport === "pdf" ? "Exporting PDF..." : "Export PDF"}
+                      </button>
+                      <button
+                        onClick={() => handleFullExport("docx")}
+                        disabled={actionState.globalExport === "docx"}
+                        className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/20 active:scale-95 disabled:opacity-50"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        {actionState.globalExport === "docx" ? "Exporting DOCX..." : "Export DOCX"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
             ) : (
-              <div className="rounded-[28px] border border-dashed border-line bg-white/60 p-12 text-center shadow-panel-soft">
-                <p className="text-lg font-medium text-ink">No planner output yet.</p>
-                <p className="mt-2 text-sm leading-7 text-slate-500">
-                  Run Planner with a topic to generate structured research decomposition from the backend.
+              <div className="rounded-[32px] border border-dashed border-slate-200 bg-white/50 p-16 text-center shadow-sm">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-slate-300">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Ready to Plan</h3>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-7 text-slate-500">
+                  Enter your research topic above to generate a multi-dimensional decomposition for your study.
                 </p>
               </div>
             )}

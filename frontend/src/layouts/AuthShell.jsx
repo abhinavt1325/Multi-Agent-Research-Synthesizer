@@ -131,7 +131,7 @@ function AuthShell({ children, footer }) {
           {CAPABILITIES.map((cap, index) => (
             <div
               key={cap.label}
-              className={`animate-slide-right delay-${(index + 2) * 100} hover-lift hover-glow-pink`}
+              className={`animate-slide-right delay-${(index + 2) * 100} hover-lift hover-glow-accent`}
               style={{
                 display: "flex",
                 alignItems: "flex-start",
