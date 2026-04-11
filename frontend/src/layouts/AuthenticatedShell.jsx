@@ -141,6 +141,7 @@ function AuthenticatedShell() {
 
       {/* ── Fixed top title bar (Dark, premium) ───────────────────────── */}
       <header
+        className="animate-slide-up"
         style={{
           position: "fixed",
           top: 0,
@@ -158,6 +159,7 @@ function AuthenticatedShell() {
       >
         {/* Left: brand wordmark in sidebar-width zone */}
         <div
+          className="animate-fade-in"
           style={{
             flexShrink: 0,
             width: `${SIDEBAR_W}px`,
@@ -168,34 +170,28 @@ function AuthenticatedShell() {
             borderRight: "1px solid rgba(255, 255, 255, 0.08)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-            <div
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+            <img 
+              src="/logo.jpg" 
+              alt="AlgoVision" 
               style={{
-                width: "28px",
-                height: "28px",
-                borderRadius: "8px",
-                background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                height: "32px",
+                width: "auto",
+                objectFit: "contain",
+                borderRadius: "4px",
               }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-            </div>
+            />
             <span
               style={{
-                fontSize: "0.8rem",
+                fontSize: "1.1rem",
                 fontWeight: 700,
                 color: "#f8fafc",
-                letterSpacing: "-0.015em",
+                letterSpacing: "-0.02em",
                 lineHeight: 1.2,
+                fontFamily: "'Inter', 'IBM Plex Sans', sans-serif"
               }}
             >
-              Research<br />
-              <span style={{ color: "#a5b4fc" }}>Synthesizer</span>
+              AlgoVision
             </span>
           </div>
         </div>
@@ -341,7 +337,7 @@ function AuthenticatedShell() {
                 >
                   {group.group}
                 </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {group.items.map((item) => (
                     <NavLink
                       key={item.path}
@@ -357,15 +353,18 @@ function AuthenticatedShell() {
                         color: isActive ? "#4f46e5" : "#475569",
                         background: isActive ? "#eef2ff" : "transparent",
                         textDecoration: "none",
-                        transition: "background 0.15s, color 0.15s",
+                        transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                        transform: "translateX(0)",
                       })}
                       onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "translateX(5px)";
                         if (!e.currentTarget.style.background.includes("eef2ff")) {
                           e.currentTarget.style.background = "#f8fafc";
                           e.currentTarget.style.color = "#1e293b";
                         }
                       }}
                       onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "translateX(0)";
                         if (!e.currentTarget.style.background.includes("eef2ff")) {
                           e.currentTarget.style.background = "transparent";
                           e.currentTarget.style.color = "#475569";
@@ -427,7 +426,7 @@ function AuthenticatedShell() {
                   fontWeight: 400,
                 }}
               >
-                © 2026 Multi-Agent Research Synthesizer{" "}
+                © 2026 AlgoVision{" "}
                 <span style={{ margin: "0 0.4rem", color: "#cbd5e1" }}>|</span>{" "}
                 Research Intelligence Platform{" "}
                 <span style={{ margin: "0 0.4rem", color: "#cbd5e1" }}>|</span>{" "}

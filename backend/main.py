@@ -17,7 +17,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="Multi-Agent Research Synthesizer API",
+        title="AlgoVision API",
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",

@@ -295,7 +295,7 @@ function SignupPage() {
               fontSize: "0.875rem",
               fontWeight: 700,
               color: "#ffffff",
-              background: status === "submitting" ? "#4f46e5" : "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)",
+              background: status === "submitting" ? "#5955ba" : "linear-gradient(135deg, #5955ba 0%, #6d6fc4 100%)",
               border: "none",
               borderRadius: "10px",
               cursor: status === "submitting" ? "not-allowed" : "pointer",

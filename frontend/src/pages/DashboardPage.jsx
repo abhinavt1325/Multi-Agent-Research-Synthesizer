@@ -63,16 +63,16 @@ function DashboardPage() {
         <div className="flex flex-col gap-6">
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Dashboard</p>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Protected research workspace</h1>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">AI Research Intelligence Workspace</h1>
             <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              This dashboard is gated behind authentication and acts as the product entry point for research modules.
+              Access all six AI research agents, graph memory, and evidence workflows from one unified workspace.
             </p>
           </div>
         </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <article className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
+        <article className="hover-lift rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Entry Point</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">Research modules</h2>
           <p className="mt-3 text-sm leading-7 text-slate-600">
@@ -136,7 +136,7 @@ function DashboardPage() {
           </div>
         </article>
 
-        <article className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
+        <article className="hover-lift rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Live Status</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">Backend overview</h2>
           <p className="mt-3 text-sm leading-7 text-slate-600">
@@ -151,28 +151,28 @@ function DashboardPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
+        <article className="hover-lift rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Papers Count</p>
           <p className="mt-3 text-4xl font-semibold tracking-tight text-ink">
             {papersCount ?? "Unavailable"}
           </p>
         </article>
 
-        <article className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
+        <article className="hover-lift rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Graph Nodes</p>
           <p className="mt-3 text-4xl font-semibold tracking-tight text-ink">
             {graphNodes ?? "Unavailable"}
           </p>
         </article>
 
-        <article className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
+        <article className="hover-lift rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Active Agents</p>
           <p className="mt-3 text-4xl font-semibold tracking-tight text-ink">
             {activeAgents ?? "Unavailable"}
           </p>
         </article>
 
-        <article className="rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
+        <article className="hover-lift rounded-[28px] border border-line bg-panel/95 p-6 shadow-panel-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Relationships</p>
           <p className="mt-3 text-4xl font-semibold tracking-tight text-ink">
             {graphData?.total_relationships ?? "Unavailable"}
@@ -196,7 +196,7 @@ function DashboardPage() {
             {recentPapers.map((paper) => (
               <article
                 key={`${paper.paper_id || paper.title}-${paper.year || "na"}`}
-                className="rounded-[24px] border border-line/80 bg-white/75 p-5"
+                className="hover-lift rounded-[24px] border border-line/80 bg-white/75 p-5"
               >
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted">

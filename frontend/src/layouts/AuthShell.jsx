@@ -85,72 +85,53 @@ function AuthShell({ children, footer }) {
           }}
         />
 
-        {/* Logo mark */}
-        <div style={{ marginBottom: "2.5rem" }}>
-          <div
+        {/* Brand header */}
+        <div className="animate-slide-up" style={{ marginBottom: "2rem", display: "flex", alignItems: "center", gap: "1.25rem" }}>
+          <img 
+            src="/logo.jpg" 
+            alt="AlgoVision Logo" 
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.625rem",
-              padding: "0.45rem 0.9rem",
-              borderRadius: "10px",
-              border: "1px solid rgba(99,102,241,0.35)",
-              background: "rgba(99,102,241,0.1)",
-              backdropFilter: "blur(8px)",
+              height: "54px",
+              width: "auto",
+              objectFit: "contain",
+              borderRadius: "8px",
+            }}
+          />
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(1.85rem, 2.7vw, 2.4rem)",
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              color: "#ffffff",
+              fontFamily: "'Inter', 'IBM Plex Sans', 'Segoe UI', sans-serif",
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(165,180,252,1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            <span
-              style={{
-                fontSize: "0.65rem",
-                fontWeight: 700,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: "rgba(165,180,252,0.9)",
-                fontFamily: "'Inter', 'IBM Plex Sans', sans-serif",
-              }}
-            >
-              Beta
-            </span>
-          </div>
+            AlgoVision
+          </h1>
         </div>
-
-        {/* Product name */}
-        <h1
-          style={{
-            margin: "0 0 1rem",
-            fontSize: "clamp(1.65rem, 2.4vw, 2.1rem)",
-            fontWeight: 700,
-            lineHeight: 1.25,
-            letterSpacing: "-0.02em",
-            color: "#ffffff",
-            fontFamily: "'Inter', 'IBM Plex Sans', 'Segoe UI', sans-serif",
-          }}
-        >
-          Multi-Agent<br />Research Synthesizer
-        </h1>
 
         {/* Tagline */}
         <p
+          className="animate-slide-up delay-100"
           style={{
             margin: "0 0 2.75rem",
-            fontSize: "0.9rem",
-            lineHeight: 1.75,
+            fontSize: "0.95rem",
+            lineHeight: 1.6,
             color: "rgba(148,163,184,0.9)",
-            maxWidth: "340px",
+            maxWidth: "380px",
             fontFamily: "'Inter', 'IBM Plex Sans', sans-serif",
           }}
         >
-          AI-powered research intelligence for planning, reading, comparing, contradiction detection, and gap discovery.
+          AI-powered research intelligence for advanced scientific workflows.
         </p>
 
         {/* Capability highlights */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-          {CAPABILITIES.map((cap) => (
+          {CAPABILITIES.map((cap, index) => (
             <div
               key={cap.label}
+              className={`animate-slide-right delay-${(index + 2) * 100} hover-lift hover-glow-pink`}
               style={{
                 display: "flex",
                 alignItems: "flex-start",
@@ -160,7 +141,6 @@ function AuthShell({ children, footer }) {
                 border: "1px solid rgba(255,255,255,0.07)",
                 background: "rgba(255,255,255,0.035)",
                 backdropFilter: "blur(8px)",
-                transition: "border-color 0.2s",
               }}
             >
               <div
@@ -203,6 +183,7 @@ function AuthShell({ children, footer }) {
 
         {/* Bottom copyright */}
         <p
+          className="animate-fade-in delay-400"
           style={{
             marginTop: "auto",
             paddingTop: "2.5rem",
@@ -211,12 +192,13 @@ function AuthShell({ children, footer }) {
             fontFamily: "'Inter', 'IBM Plex Sans', sans-serif",
           }}
         >
-          © {new Date().getFullYear()} Multi-Agent Research Synthesizer. All rights reserved.
+          © {new Date().getFullYear()} AlgoVision. All rights reserved.
         </p>
       </section>
 
       {/* Right panel — form */}
       <section
+        className="animate-fade-in"
         style={{
           flex: "1 1 58%",
           display: "flex",

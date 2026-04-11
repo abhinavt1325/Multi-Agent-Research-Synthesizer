@@ -1,10 +1,10 @@
-# Multi-Agent Research Synthesizer
+# AlgoVision
 
 A premium, state-of-the-art research synthesis platform powered by multi-agent AI systems. This tool orchestrates specialized agents to hunt for academic papers, identify research gaps, compare evidence, and detect contradictions, all visualized through an interactive graph explorer.
 
 ## 🚀 Overview
 
-The Multi-Agent Research Synthesizer is designed to streamline the academic literature review process. By leveraging Large Language Models (LLMs) like Groq (Llama 3) and Google Gemini, the platform provides deep insights into complex research topics.
+AlgoVision is designed to streamline the academic literature review process. By leveraging Large Language Models (LLMs) like Groq (Llama 3) and Google Gemini, the platform provides deep insights into complex research topics.
 
 ### Key Features
 - **Intelligent Planner**: Strategizes the research workflow based on your topic.
