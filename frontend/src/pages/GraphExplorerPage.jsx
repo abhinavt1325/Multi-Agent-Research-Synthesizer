@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchGraphData } from "../services/dashboard";
+import { fetchGraphData, deletePaper } from "../services/dashboard";
 
 const GRAPH_WIDTH = 1100;
 const GRAPH_HEIGHT = 720;
@@ -129,6 +129,9 @@ function GraphExplorerPage() {
   const [selectedNodeId, setSelectedNodeId] = useState("");
   const [viewport, setViewport] = useState({ scale: 1, x: 0, y: 0 });
   const [dragState, setDragState] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hoveredNodeId, setHoveredNodeId] = useState(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     let isActive = true;
@@ -181,6 +184,24 @@ function GraphExplorerPage() {
     updateZoom(viewport.scale + delta);
   }
 
+  const handleDeleteNode = async () => {
+    if (!selectedNode) return;
+    const paperId = selectedNode?.details?.paper_id || selectedNode?.node_id;
+    if (!paperId) return;
+
+    if (!window.confirm("Remove this paper from your research memory?")) return;
+
+    try {
+      await deletePaper(paperId);
+      setSelectedNodeId("");
+      const newGraphData = await fetchGraphData();
+      setGraphData(newGraphData);
+    } catch (e) {
+      console.error("Failed to delete paper", e);
+      alert(e.message || "Failed to delete paper");
+    }
+  };
+
   function handlePointerDown(event) {
     if (event.target.closest("[data-node-interactive='true']")) {
       return;
@@ -194,7 +215,8 @@ function GraphExplorerPage() {
     });
   }
 
-  function handlePointerMove(event) {
+  function handleSvgMouseMove(event) {
+    setMousePos({ x: event.clientX, y: event.clientY });
     if (!dragState) {
       return;
     }
@@ -282,12 +304,18 @@ function GraphExplorerPage() {
           {graphLayout.nodes.length ? (
             <div
               ref={graphContainerRef}
-              className="group relative mt-5 overflow-hidden rounded-[24px] border border-white/5 bg-[#0a0f1d] shadow-inner"
+              className={`group overflow-hidden bg-[#050810] transition-all duration-500 ease-in-out ${
+                isFullscreen
+                  ? "fixed inset-0 z-[100] flex animate-in zoom-in-95"
+                  : "relative mt-5 rounded-[24px] border border-white/5 shadow-inner"
+              }`}
               onWheel={handleWheel}
-              onMouseMove={handlePointerMove}
+              onMouseMove={handleSvgMouseMove}
               onMouseUp={handlePointerUp}
               onMouseLeave={handlePointerUp}
             >
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900/10 via-transparent to-transparent" />
+              
               {/* Floating Graph Toolbar */}
               <div className="absolute bottom-6 right-6 z-10 flex items-center gap-3 rounded-[24px] border border-white/10 bg-slate-900/80 p-3 shadow-2xl backdrop-blur-md transition-all group-hover:bg-slate-900">
                 <div className="flex items-center gap-2 border-r border-white/10 pr-3">
@@ -333,17 +361,75 @@ function GraphExplorerPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                   RESET
                 </button>
+                <div className="mx-1 h-6 w-px bg-white/10" />
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 text-[11px] font-bold text-white transition hover:bg-white/10 active:scale-95"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {isFullscreen ? (
+                       <path d="M8 3v3h-3m16 0h-3v-3m0 18v-3h3m-16 0h3v3"/>
+                    ) : (
+                       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    )}
+                  </svg>
+                  {isFullscreen ? "EXIT" : "FULLSCREEN"}
+                </button>
               </div>
 
               <svg
                 viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
-                className={`h-[560px] w-full ${dragState ? "cursor-grabbing" : "cursor-grab"}`}
+                className={`w-full ${isFullscreen ? "h-screen" : "h-[560px]"} ${dragState ? "cursor-grabbing" : "cursor-grab"}`}
                 onMouseDown={handlePointerDown}
               >
+                <style>
+                  {`
+                    @keyframes softPulse {
+                      0% { filter: drop-shadow(0 0 4px var(--glow-color)); transform: scale(1); }
+                      50% { filter: drop-shadow(0 0 12px var(--glow-color)); transform: scale(1.04); }
+                      100% { filter: drop-shadow(0 0 4px var(--glow-color)); transform: scale(1); }
+                    }
+                    @keyframes edgeFlow {
+                      to { stroke-dashoffset: -20; }
+                    }
+                    .node-anim {
+                      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+                    .node-hovered {
+                      animation: softPulse 2s infinite ease-in-out;
+                      z-index: 10;
+                    }
+                    .edge-active {
+                      animation: edgeFlow 1s linear infinite;
+                      stroke: rgba(255, 255, 255, 0.6);
+                      stroke-dasharray: 4 6;
+                    }
+                    .edge-inactive {
+                      stroke: rgba(255, 255, 255, 0.03);
+                    }
+                    .edge-default {
+                      stroke: rgba(255, 255, 255, 0.12);
+                    }
+                  `}
+                </style>
                 <defs>
                   <pattern id="graph-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                     <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
                   </pattern>
+                  <filter id="nodeShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.5" />
+                  </filter>
+                  {Object.keys(LABEL_STYLES).map(label => {
+                    const style = LABEL_STYLES[label];
+                    return (
+                      <radialGradient key={`grad-${label}`} id={`grad-${label}`} cx="30%" cy="30%" r="70%">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+                        <stop offset="25%" stopColor={style.fill} stopOpacity="1" />
+                        <stop offset="100%" stopColor={style.stroke} stopOpacity="1" />
+                      </radialGradient>
+                    );
+                  })}
                 </defs>
                 <rect width="100%" height="100%" fill="url(#graph-grid)" />
                 <g transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`}>
@@ -364,31 +450,41 @@ function GraphExplorerPage() {
                     );
                   })}
 
-                  {graphLayout.edges.map((edge) => (
-                    <g key={edge.edge_id}>
-                      <line
-                        x1={edge.source.x}
-                        y1={edge.source.y}
-                        x2={edge.target.x}
-                        y2={edge.target.y}
-                        stroke="rgba(255,255,255,0.12)"
-                        strokeWidth="1.2"
-                        strokeLinecap="round"
-                      />
-                      <text
-                        x={(edge.source.x + edge.target.x) / 2}
-                        y={(edge.source.y + edge.target.y) / 2 - 6}
-                        textAnchor="middle"
-                        className="select-none fill-white/20 text-[9px] font-bold uppercase tracking-[0.2em]"
-                      >
-                        {edge.relationship_type.replace(/_/g, " ")}
-                      </text>
-                    </g>
-                  ))}
+                  {graphLayout.edges.map((edge) => {
+                    const isHovered = edge.source.node_id === hoveredNodeId || edge.target.node_id === hoveredNodeId;
+                    const isSelected = selectedNode && (edge.source.node_id === selectedNode.node_id || edge.target.node_id === selectedNode.node_id);
+                    const isActive = isHovered || isSelected;
+                    const hasActiveNode = hoveredNodeId || selectedNode;
+                    const edgeClass = isActive ? "edge-active" : (hasActiveNode ? "edge-inactive" : "edge-default");
+
+                    return (
+                      <g key={edge.edge_id}>
+                        <line
+                          x1={edge.source.x}
+                          y1={edge.source.y}
+                          x2={edge.target.x}
+                          y2={edge.target.y}
+                          strokeWidth={isActive ? "2" : "1.2"}
+                          strokeLinecap="round"
+                          className={`${edgeClass} transition-colors duration-500`}
+                        />
+                        <text
+                          x={(edge.source.x + edge.target.x) / 2}
+                          y={(edge.source.y + edge.target.y) / 2 - 6}
+                          textAnchor="middle"
+                          className={`select-none text-[9px] font-bold uppercase tracking-[0.2em] transition-opacity duration-300 ${isActive ? 'fill-white/60' : 'fill-white/10'}`}
+                        >
+                          {edge.relationship_type.replace(/_/g, " ")}
+                        </text>
+                      </g>
+                    );
+                  })}
 
                   {graphLayout.nodes.map((node) => {
                     const isSelected = selectedNode?.node_id === node.node_id;
+                    const isHovered = hoveredNodeId === node.node_id;
                     const labelStyle = LABEL_STYLES[getNodeLabel(node)];
+                    const isDimmed = !isSelected && !isHovered && (selectedNode || hoveredNodeId);
 
                     return (
                       <g
@@ -396,19 +492,28 @@ function GraphExplorerPage() {
                         data-node-interactive="true"
                         transform={`translate(${node.x} ${node.y})`}
                         className="cursor-pointer"
+                        style={{ '--glow-color': labelStyle.fill }}
                         onClick={() => setSelectedNodeId(node.node_id)}
+                        onMouseEnter={() => setHoveredNodeId(node.node_id)}
+                        onMouseLeave={() => setHoveredNodeId(null)}
                       >
+                        {isSelected && (
+                          <circle r={labelStyle.radius + 10} fill="transparent" stroke={labelStyle.glow} strokeWidth="3" className="animate-pulse" />
+                        )}
                         <circle
                           r={labelStyle.radius}
-                          fill={labelStyle.fill}
-                          stroke={isSelected ? "#ffffff" : labelStyle.stroke}
-                          strokeWidth={isSelected ? 3 : 1.5}
-                          className="transition-all duration-300"
+                          fill={`url(#grad-${getNodeLabel(node)})`}
+                          stroke={isSelected ? "#ffffff" : "transparent"}
+                          strokeWidth={isSelected ? 2 : 0}
+                          filter="url(#nodeShadow)"
+                          className={`node-anim ${isHovered ? 'node-hovered' : ''}`}
+                          style={{ opacity: isDimmed ? 0.35 : 1 }}
                         />
                         <text
                           y={labelStyle.radius + 22}
                           textAnchor="middle"
-                          className={`select-none text-[11px] font-bold tracking-tight transition-colors ${isSelected ? 'fill-white' : 'fill-white/60'}`}
+                          className={`select-none text-[11px] font-bold tracking-tight transition-all duration-300 ${isSelected || isHovered ? 'fill-white drop-shadow-md' : 'fill-white/50'}`}
+                          style={{ opacity: isDimmed ? 0.2 : 1 }}
                         >
                           {node.display_name.length > 28 ? `${node.display_name.slice(0, 28)}...` : node.display_name}
                         </text>
@@ -417,6 +522,33 @@ function GraphExplorerPage() {
                   })}
                 </g>
               </svg>
+
+              {/* Tooltip */}
+              {hoveredNodeId && (
+                <div 
+                  className="pointer-events-none fixed z-[120] rounded-xl border border-white/10 bg-slate-900/90 px-4 py-3 shadow-2xl backdrop-blur-md transition-all duration-75 ease-out"
+                  style={{
+                    left: `${mousePos.x + 16}px`,
+                    top: `${mousePos.y + 16}px`
+                  }}
+                >
+                  {(() => {
+                    const hoveredNode = graphLayout.nodes.find(n => n.node_id === hoveredNodeId);
+                    if (!hoveredNode) return null;
+                    return (
+                      <>
+                        <div className="flex items-center gap-2">
+                           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: LABEL_STYLES[getNodeLabel(hoveredNode)].fill }} />
+                           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{hoveredNode.label}</span>
+                        </div>
+                        <p className="mt-1.5 max-w-[240px] text-sm font-medium text-white line-clamp-2">
+                          {hoveredNode.display_name}
+                        </p>
+                      </>
+                    )
+                  })()}
+                </div>
+              )}
             </div>
           ) : (
             <div className="mt-5 rounded-[24px] border border-dashed border-line bg-white/70 p-12 text-center">
@@ -443,6 +575,18 @@ function GraphExplorerPage() {
 
           {selectedNode ? (
             <div className="mt-6 space-y-4">
+              {selectedNode.label === "Paper" && (
+                <div className="rounded-[24px] border border-red-100/50 bg-red-50/30 p-5 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500">Danger Zone</p>
+                  <button
+                    onClick={handleDeleteNode}
+                    className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Delete Paper
+                  </button>
+                </div>
+              )}
               <div className="rounded-[24px] border border-line/80 bg-white/80 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Node Type</p>
                 <p className="mt-2 text-lg font-semibold text-ink">{selectedNode.label}</p>

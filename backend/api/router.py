@@ -235,6 +235,11 @@ class SavePaperResponse(BaseModel):
     detail: str
 
 
+class DeletePaperResponse(BaseModel):
+    status: str
+    detail: str
+
+
 AGENT_ROUTE_DESCRIPTORS = [
     AgentRouteDescriptor(
         name="planner",
@@ -536,6 +541,29 @@ async def save_paper_to_graph_endpoint(request: SavePaperRequest) -> SavePaperRe
             detail="Failed to save paper to topic graph.",
         ) from exc
     return SavePaperResponse(status="success", detail="Paper saved to topic memory.")
+
+
+@api_router.delete("/papers/{paper_id:path}", response_model=DeletePaperResponse)
+async def delete_paper_endpoint(paper_id: str) -> DeletePaperResponse:
+    try:
+        try:
+            from backend.neo4j.queries import GraphQueryError, delete_paper
+        except ModuleNotFoundError:
+            from neo4j.queries import GraphQueryError, delete_paper
+            
+        delete_paper(paper_id=paper_id)
+        
+    except GraphQueryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete paper from topic graph.",
+        ) from exc
+    return DeletePaperResponse(status="success", detail="Paper removed from graph memory.")
 
 
 @api_router.post("/paper-reader", response_model=PaperReaderResponse)

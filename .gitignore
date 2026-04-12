@@ -45,6 +45,7 @@ pip-delete-this-directory.txt
 node_modules/
 frontend/node_modules/
 frontend/dist/
+frontend/build/
 frontend/public/logo.jpg
 frontend/.next/
 frontend/out/
@@ -62,8 +63,20 @@ backend/auth.db
 backend/chroma/
 *.sqlite3
 *.db
+*.db-journal
+*.db-shm
+*.db-wal
 *.log
 local_settings.py
+
+# --- Generated Exports ---
+*.pdf
+*.docx
+*.zip
+*.txt
+!requirements.txt
+!README.md
+!LICENSE
 
 # --- Environment variables ---
 .env
@@ -86,6 +99,7 @@ frontend/.env
 .project
 .pydevproject
 .settings/
+.history/
 
 # --- OS ---
 .DS_Store
@@ -106,4 +120,7 @@ Thumbs.db
 *.tar
 *.zip
 
-
+# --- AI Tools ---
+.antigravity/
+.gemini/
+.antigravityignore

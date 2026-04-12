@@ -4,6 +4,7 @@ import {
   fetchDashboardSummary,
   fetchGraphData,
   fetchRecentPapers,
+  deletePaper,
 } from "../services/dashboard";
 
 function DashboardPage() {
@@ -56,6 +57,23 @@ function DashboardPage() {
   const papersCount = graphData?.papers_count;
   const graphNodes = graphData?.total_nodes;
   const activeAgents = summary?.active_agents;
+
+  const handleDeletePaper = async (paperId) => {
+    if (!paperId) return;
+    if (!window.confirm("Remove this paper from your research memory?")) return;
+    try {
+      await deletePaper(paperId);
+      const [recentResp, graphResp] = await Promise.all([
+        fetchRecentPapers(),
+        fetchGraphData(),
+      ]);
+      setRecentPapers(recentResp.papers || []);
+      setGraphData(graphResp);
+    } catch (e) {
+      console.error("Failed to delete paper", e);
+      alert(e.message || "Failed to delete paper");
+    }
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
@@ -209,6 +227,15 @@ function DashboardPage() {
                   </div>
                   <h3 className="text-lg font-semibold text-ink">{paper.title || "Untitled paper"}</h3>
                   <p className="text-sm text-slate-500">{paper.paper_id || "Paper ID unavailable"}</p>
+                </div>
+                <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
+                  <button
+                    onClick={() => handleDeletePaper(paper.paper_id)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-red-100 bg-red-50/50 px-4 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 active:scale-95"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Delete
+                  </button>
                 </div>
               </article>
             ))}

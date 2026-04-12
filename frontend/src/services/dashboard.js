@@ -34,3 +34,15 @@ export function fetchRecentPapers() {
 export function fetchGraphData() {
   return getJson("/graph-data");
 }
+
+export async function deletePaper(paperId) {
+  const response = await fetch(`${API_BASE_URL}/papers/${encodeURIComponent(paperId)}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  return response.json();
+}

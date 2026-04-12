@@ -507,3 +507,43 @@ def find_user(tx, email):
         email=email
     )
     return result.single()
+
+
+def delete_paper(paper_id: str, driver: Driver | None = None) -> bool:
+    cypher = """
+    MATCH (paper:Paper {paper_id: $paper_id})
+    
+    OPTIONAL MATCH (topic:Topic)-[r1:HAS_PAPER]->(paper)
+    DELETE r1
+    OPTIONAL MATCH (paper)-[r2:HAS_TOPIC]->(topic)
+    DELETE r2
+    OPTIONAL MATCH (user:User)-[r3:SAVED]->(paper)
+    DELETE r3
+
+    WITH paper
+    OPTIONAL MATCH (paper)-[r]-()
+    WITH paper, count(r) AS remaining_rels
+    
+    CALL {
+        WITH paper, remaining_rels
+        WITH paper WHERE remaining_rels = 0
+        DELETE paper
+    }
+    
+    RETURN true AS success
+    """
+
+    params = {
+        "paper_id": _require_non_empty(paper_id, "paper_id"),
+    }
+
+    active_driver = driver or get_neo4j_driver()
+
+    try:
+        with active_driver.session() as session:
+            session.run(cypher, params)
+    except (ServiceUnavailable, Neo4jError, RuntimeError) as exc:
+        LOGGER.exception("Failed to delete Paper node.")
+        raise GraphQueryError("Failed to delete Paper node.") from exc
+
+    return True
