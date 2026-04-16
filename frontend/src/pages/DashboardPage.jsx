@@ -5,53 +5,57 @@ import {
   fetchGraphData,
   fetchRecentPapers,
   deletePaper,
+  restoreLegacyData,
 } from "../services/dashboard";
+import { useAuth } from "../hooks/useAuth";
 
 function DashboardPage() {
+  const { userEmail } = useAuth();
   const [summary, setSummary] = useState(null);
   const [recentPapers, setRecentPapers] = useState([]);
   const [graphData, setGraphData] = useState(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [restoring, setRestoring] = useState(false);
+
+  const loadDashboard = async () => {
+    setStatus("loading");
+    setError("");
+
+    try {
+      const [summaryResponse, recentPapersResponse, graphDataResponse] = await Promise.all([
+        fetchDashboardSummary(userEmail),
+        fetchRecentPapers(userEmail),
+        fetchGraphData(userEmail),
+      ]);
+
+      setSummary(summaryResponse);
+      setRecentPapers(recentPapersResponse.papers || []);
+      setGraphData(graphDataResponse);
+      setStatus("success");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to load dashboard data.");
+      setStatus("error");
+    }
+  };
 
   useEffect(() => {
-    let isActive = true;
-
-    async function loadDashboard() {
-      setStatus("loading");
-      setError("");
-
-      try {
-        const [summaryResponse, recentPapersResponse, graphDataResponse] = await Promise.all([
-          fetchDashboardSummary(),
-          fetchRecentPapers(),
-          fetchGraphData(),
-        ]);
-
-        if (!isActive) {
-          return;
-        }
-
-        setSummary(summaryResponse);
-        setRecentPapers(recentPapersResponse.papers || []);
-        setGraphData(graphDataResponse);
-        setStatus("success");
-      } catch (requestError) {
-        if (!isActive) {
-          return;
-        }
-
-        setError(requestError.message || "Unable to load dashboard data.");
-        setStatus("error");
-      }
-    }
-
     loadDashboard();
+  }, [userEmail]);
 
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  const handleRestore = async () => {
+    if (!userEmail) return;
+    setRestoring(true);
+    try {
+      const result = await restoreLegacyData(userEmail);
+      alert(`Restoration complete! ${result.results.restored_topics} topics and ${result.results.restored_papers} papers were linked to your account.`);
+      loadDashboard();
+    } catch (e) {
+      alert("Restoration failed: " + e.message);
+    } finally {
+      setRestoring(false);
+    }
+  };
 
   const agentRoutes = summary?.agent_routes || [];
   const papersCount = graphData?.papers_count;
@@ -59,14 +63,22 @@ function DashboardPage() {
   const activeAgents = summary?.active_agents;
 
   const handleDeletePaper = async (paperId) => {
-    if (!paperId) return;
+    if (!paperId) {
+      alert("Cannot delete: paper_id is missing for this paper.");
+      return;
+    }
     if (!window.confirm("Remove this paper from your research memory?")) return;
     try {
-      await deletePaper(paperId);
-      const [recentResp, graphResp] = await Promise.all([
-        fetchRecentPapers(),
-        fetchGraphData(),
+      await deletePaper(paperId, userEmail);
+      
+      // Immediately refresh all dashboard data to sync counts and lists
+      const [summaryResp, recentResp, graphResp] = await Promise.all([
+        fetchDashboardSummary(userEmail),
+        fetchRecentPapers(userEmail),
+        fetchGraphData(userEmail),
       ]);
+      
+      setSummary(summaryResp);
       setRecentPapers(recentResp.papers || []);
       setGraphData(graphResp);
     } catch (e) {
@@ -86,6 +98,21 @@ function DashboardPage() {
               Access all six AI research agents, graph memory, and evidence workflows from one unified workspace.
             </p>
           </div>
+          {papersCount === 0 && status === "success" && (
+            <div className="flex items-center gap-4 rounded-2xl bg-white/10 p-4 ring-1 ring-white/20">
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-bold text-white">Missing your old research data?</p>
+                <p className="text-xs text-slate-400 font-medium">Our new privacy system segments data by user. Click below to link your legacy research to this account.</p>
+              </div>
+              <button
+                onClick={handleRestore}
+                disabled={restoring}
+                className="whitespace-nowrap rounded-xl bg-white px-4 py-2 text-xs font-bold text-slate-950 transition hover:bg-slate-100 disabled:opacity-50"
+              >
+                {restoring ? "Restoring..." : "Restore My Research"}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -231,7 +258,9 @@ function DashboardPage() {
                 <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
                   <button
                     onClick={() => handleDeletePaper(paper.paper_id)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-red-100 bg-red-50/50 px-4 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 active:scale-95"
+                    disabled={!paper.paper_id}
+                    title={paper.paper_id ? "Remove from research memory" : "paper_id unavailable — cannot delete"}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-red-100 bg-red-50/50 px-4 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     Delete

@@ -59,31 +59,14 @@ function SignupPage() {
     setStatus("submitting");
 
     try {
-      const response = await fetch("http://localhost:8000/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          password: form.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.message) {
-        setMessage("Account created successfully. Redirecting to login…");
-        setTimeout(() => { window.location.href = "/login"; }, 1500);
-      } else {
-        setError(data.detail || "Unable to create account. Please try again.");
-      }
+      const data = await signup(form.name.trim(), form.email.trim(), form.password);
+      setMessage("Account created successfully. Redirecting to login…");
+      setTimeout(() => { window.location.href = "/login"; }, 1500);
     } catch (submissionError) {
       if (submissionError instanceof AuthConfigurationError) {
         setMessage(submissionError.message);
       } else {
-        setError("Unable to process the signup request.");
+        setError(submissionError.message || "Unable to create account. Please try again.");
       }
     } finally {
       setStatus("idle");
@@ -97,11 +80,12 @@ function SignupPage() {
 
     try {
       await signInWithGoogle();
+      window.location.href = "/dashboard";
     } catch (submissionError) {
       if (submissionError instanceof AuthConfigurationError) {
         setMessage(submissionError.message);
       } else {
-        setError("Unable to start Google sign-in.");
+        setError(submissionError.message || "Unable to start Google sign-in.");
       }
     } finally {
       setStatus("idle");

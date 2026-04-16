@@ -20,7 +20,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
+                password TEXT NOT NULL,
+                provider TEXT DEFAULT 'local'
             )
             """
         )
@@ -29,13 +30,13 @@ def init_db():
         conn.close()
 
 
-def create_user(name: str, email: str, password: str) -> None:
+def create_user(name: str, email: str, password: str, provider: str = 'local') -> None:
     conn = get_connection()
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-            (name, email, password)
+            "INSERT INTO users (name, email, password, provider) VALUES (?, ?, ?, ?)",
+            (name, email, password, provider)
         )
         conn.commit()
     finally:

@@ -40,6 +40,10 @@ coverage.xml
 .python-version
 pip-log.txt
 pip-delete-this-directory.txt
+.ipynb_checkpoints/
+*.pyc
+*.pyo
+*.pyd
 
 # --- Node.js / Frontend ---
 node_modules/
@@ -61,6 +65,7 @@ pnpm-debug.log*
 # --- Databases and Local Data ---
 backend/auth.db
 backend/chroma/
+*.sqlite
 *.sqlite3
 *.db
 *.db-journal
@@ -68,6 +73,9 @@ backend/chroma/
 *.db-wal
 *.log
 local_settings.py
+*.bak
+*.tmp
+*.temp
 
 # --- Generated Exports ---
 *.pdf
@@ -101,7 +109,7 @@ frontend/.env
 .settings/
 .history/
 
-# --- OS ---
+# --- OS / System ---
 .DS_Store
 .DS_Store?
 ._*
@@ -109,6 +117,8 @@ frontend/.env
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
 
 # --- Archives ---
 *.7z
@@ -124,3 +134,10 @@ Thumbs.db
 .antigravity/
 .gemini/
 .antigravityignore
+/scratch/
+.brain/
+
+# --- Misc ---
+*_fixed_func.py
+temp_*.py
+*.log

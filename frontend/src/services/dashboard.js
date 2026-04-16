@@ -23,21 +23,41 @@ async function getJson(path) {
   return response.json();
 }
 
-export function fetchDashboardSummary() {
-  return getJson("/dashboard-summary");
+export function fetchDashboardSummary(email = "") {
+  const query = email ? `?user_email=${encodeURIComponent(email)}` : "";
+  return getJson(`/dashboard-summary${query}`);
 }
 
-export function fetchRecentPapers() {
-  return getJson("/recent-papers");
+export function fetchRecentPapers(email = "") {
+  const query = email ? `?user_email=${encodeURIComponent(email)}` : "";
+  return getJson(`/recent-papers${query}`);
 }
 
-export function fetchGraphData() {
-  return getJson("/graph-data");
+export function fetchGraphData(email = "") {
+  const query = email ? `?user_email=${encodeURIComponent(email)}` : "";
+  return getJson(`/graph-data${query}`);
 }
 
-export async function deletePaper(paperId) {
-  const response = await fetch(`${API_BASE_URL}/papers/${encodeURIComponent(paperId)}`, {
+export async function deletePaper(paperId, email = "") {
+  const query = email ? `?user_email=${encodeURIComponent(email)}` : "";
+  const response = await fetch(`${API_BASE_URL}/papers/${encodeURIComponent(paperId)}${query}`, {
     method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  return response.json();
+}
+
+export async function restoreLegacyData(email) {
+  const response = await fetch(`${API_BASE_URL}/auth/restore-legacy-data`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
   });
 
   if (!response.ok) {

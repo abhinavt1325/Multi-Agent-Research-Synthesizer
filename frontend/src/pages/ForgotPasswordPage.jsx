@@ -24,23 +24,14 @@ function ForgotPasswordPage() {
     setStatus("submitting");
 
     try {
-      const response = await fetch("http://localhost:8000/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: email.trim()
-        })
-      });
-
-      const data = await response.json();
-      setMessage(data.message || "Reset link simulated");
+      await requestPasswordReset(email.trim());
+      setMessage("Recovery email sent. Please check your inbox and spam folder.");
+      setEmail("");
     } catch (submissionError) {
       if (submissionError instanceof AuthConfigurationError) {
         setMessage(submissionError.message);
       } else {
-        setError("Unable to process the password reset request.");
+        setError(submissionError.message || "Unable to process the password reset request.");
       }
     } finally {
       setStatus("idle");

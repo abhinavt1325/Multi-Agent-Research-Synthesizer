@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchGraphData, deletePaper } from "../services/dashboard";
+import { useAuth } from "../hooks/useAuth";
 
 const GRAPH_WIDTH = 1100;
 const GRAPH_HEIGHT = 720;
@@ -122,6 +123,7 @@ function buildGraphLayout(graphData) {
 }
 
 function GraphExplorerPage() {
+  const { userEmail } = useAuth();
   const graphContainerRef = useRef(null);
   const [graphData, setGraphData] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -141,7 +143,7 @@ function GraphExplorerPage() {
       setError("");
 
       try {
-        const graphResponse = await fetchGraphData();
+        const graphResponse = await fetchGraphData(userEmail);
 
         if (!isActive) {
           return;
@@ -166,7 +168,7 @@ function GraphExplorerPage() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [userEmail]);
 
   const graphLayout = buildGraphLayout(graphData);
   const selectedNode = graphLayout.nodes.find((node) => node.node_id === selectedNodeId) || graphLayout.nodes[0] || null;
@@ -185,16 +187,25 @@ function GraphExplorerPage() {
   }
 
   const handleDeleteNode = async () => {
-    if (!selectedNode) return;
-    const paperId = selectedNode?.details?.paper_id || selectedNode?.node_id;
-    if (!paperId) return;
+    if (!selectedNode || selectedNode.label !== "Paper") return;
+
+    // Use stable paper_id from node details
+    const paperId = selectedNode?.details?.paper_id;
+    if (!paperId) {
+      alert("Cannot delete: this Paper node does not have a stable paper_id.");
+      return;
+    }
 
     if (!window.confirm("Remove this paper from your research memory?")) return;
 
     try {
-      await deletePaper(paperId);
+      await deletePaper(paperId, userEmail);
+
+      // Clear selection immediately to avoid stale UI state
       setSelectedNodeId("");
-      const newGraphData = await fetchGraphData();
+
+      // Refresh the graph data to reflect the deletion
+      const newGraphData = await fetchGraphData(userEmail);
       setGraphData(newGraphData);
     } catch (e) {
       console.error("Failed to delete paper", e);
@@ -580,7 +591,13 @@ function GraphExplorerPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500">Danger Zone</p>
                   <button
                     onClick={handleDeleteNode}
-                    className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95"
+                    disabled={!selectedNode?.details?.paper_id}
+                    title={
+                      selectedNode?.details?.paper_id
+                        ? "Remove this paper from your research memory"
+                        : "paper_id unavailable \u2014 cannot delete"
+                    }
+                    className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     Delete Paper

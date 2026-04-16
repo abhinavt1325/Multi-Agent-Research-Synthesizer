@@ -31,7 +31,7 @@ const labelStyle = {
 function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signInWithGoogle, restoreAuthenticatedSession } = useAuth();
+  const { login, signInWithGoogle, restoreAuthenticatedSession } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
@@ -53,30 +53,13 @@ function LoginPage() {
     setStatus("submitting");
 
     try {
-      const response = await fetch("http://localhost:8000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: form.email.trim(),
-          password: form.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.token) {
-        restoreAuthenticatedSession(data.token, data.name || "", data.email || "");
-        navigate(nextPath, { replace: true });
-      } else {
-        setError(data.detail || "Invalid email or password.");
-      }
+      await login(form.email.trim(), form.password);
+      navigate(nextPath, { replace: true });
     } catch (submissionError) {
       if (submissionError instanceof AuthConfigurationError) {
         setMessage(submissionError.message);
       } else {
-        setError("Unable to process the login request.");
+        setError(submissionError.message || "Unable to process the login request.");
       }
     } finally {
       setStatus("idle");

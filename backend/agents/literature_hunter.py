@@ -369,6 +369,9 @@ def _persist_papers_to_graph(research_topic: str, papers: list[LiteraturePaper],
             description=f"Research topic tracked by Literature Hunter: {research_topic}",
             metadata={"source": SEMANTIC_SCHOLAR_SOURCE, "paper_count": len(papers)},
         )
+        if user_email:
+            log_user_search(user_email=user_email, topic_id=topic_id)
+
         for paper in papers:
             create_paper_node(
                 paper_id=paper.paper_id,
@@ -387,10 +390,7 @@ def _persist_papers_to_graph(research_topic: str, papers: list[LiteraturePaper],
             stored_papers += 1
             link_paper_to_topic(paper_id=paper.paper_id, topic_id=topic_id)
             linked_papers += 1
-            
-        if user_email:
-            log_user_search(user_email=user_email, topic_id=topic_id)
-            
+
     except (GraphQueryError, RuntimeError, ValueError) as exc:
         LOGGER.exception("Failed to persist Literature Hunter results to Neo4j.")
         return {

@@ -16,7 +16,7 @@ try:
     from backend.agents.planner_agent import PlannerAgentServiceError, run_planner_agent
     from backend.agents.literature_hunter import LiteratureHunterServiceError, run_literature_hunter
     from backend.config.settings import get_settings
-    from backend.neo4j.queries import GraphQueryError, fetch_graph_data, fetch_recent_papers
+    from backend.neo4j.queries import GraphQueryError, fetch_graph_data, fetch_recent_papers, fetch_graph_summary_counts, restore_legacy_data_to_user, delete_paper
     from backend.services.export_utils import (
         build_export_filename,
         build_named_export_filename,
@@ -35,7 +35,7 @@ except ModuleNotFoundError:  # pragma: no cover - supports execution from backen
     from agents.planner_agent import PlannerAgentServiceError, run_planner_agent
     from agents.literature_hunter import LiteratureHunterServiceError, run_literature_hunter
     from config.settings import get_settings
-    from neo4j.queries import GraphQueryError, fetch_graph_data, fetch_recent_papers
+    from neo4j.queries import GraphQueryError, fetch_graph_data, fetch_recent_papers, fetch_graph_summary_counts, restore_legacy_data_to_user, delete_paper
     from services.export_utils import (
         build_export_filename,
         build_named_export_filename,
@@ -486,6 +486,7 @@ async def save_paper_to_graph_endpoint(request: SavePaperRequest) -> SavePaperRe
                 create_topic_node,
                 link_paper_to_topic,
                 log_user_search,
+                save_paper_for_user,
             )
         except ModuleNotFoundError:
             from neo4j.queries import (
@@ -495,6 +496,7 @@ async def save_paper_to_graph_endpoint(request: SavePaperRequest) -> SavePaperRe
                 create_topic_node,
                 link_paper_to_topic,
                 log_user_search,
+                save_paper_for_user,
             )
             
         paper = request.paper
@@ -508,7 +510,7 @@ async def save_paper_to_graph_endpoint(request: SavePaperRequest) -> SavePaperRe
             metadata={"source": paper.source}
         )
         
-        # 2. Ensure User is linked to Topic
+        # 2. Ensure User is linked to Topic (SEARCHED_TOPIC)
         log_user_search(user_email=request.user_email, topic_id=topic_id)
         
         # 3. Create Paper node with source_url
@@ -527,7 +529,10 @@ async def save_paper_to_graph_endpoint(request: SavePaperRequest) -> SavePaperRe
             },
         )
         
-        # 4. Link Topic to Paper
+        # 4. Link User directly to Paper (SAVED) - Crucial for individual visibility
+        save_paper_for_user(user_email=request.user_email, paper_id=paper.paper_id)
+        
+        # 5. Link Topic to Paper (HAS_PAPER)
         link_paper_to_topic(paper_id=paper.paper_id, topic_id=topic_id)
         
     except GraphQueryError as exc:
@@ -544,15 +549,39 @@ async def save_paper_to_graph_endpoint(request: SavePaperRequest) -> SavePaperRe
 
 
 @api_router.delete("/papers/{paper_id:path}", response_model=DeletePaperResponse)
-async def delete_paper_endpoint(paper_id: str) -> DeletePaperResponse:
+async def delete_paper_endpoint(paper_id: str, user_email: str = "") -> DeletePaperResponse:
+    print(f"[DEBUG] DELETE PAPER REQUEST: paper_id='{paper_id}', user_email='{user_email}'")
+
+    if not user_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_email is required for deleting papers."
+        )
+
+    if not paper_id or not paper_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="paper_id is required."
+        )
+
     try:
-        try:
-            from backend.neo4j.queries import GraphQueryError, delete_paper
-        except ModuleNotFoundError:
-            from neo4j.queries import GraphQueryError, delete_paper
-            
-        delete_paper(paper_id=paper_id)
-        
+        result = delete_paper(paper_id=paper_id.strip(), user_email=user_email)
+        print(f"[DEBUG] DELETE RESULT: {result}")
+
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result.get("reason", "No SAVED relationship found for this paper and user.")
+            )
+
+        detail = "Paper relationship removed."
+        if result.get("deleted_node"):
+            detail = "Paper relationship removed and orphan node deleted."
+
+        return DeletePaperResponse(status="success", detail=detail)
+
+    except HTTPException:
+        raise
     except GraphQueryError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -561,9 +590,8 @@ async def delete_paper_endpoint(paper_id: str) -> DeletePaperResponse:
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete paper from topic graph.",
+            detail=f"Failed to delete paper: {str(exc)}",
         ) from exc
-    return DeletePaperResponse(status="success", detail="Paper removed from graph memory.")
 
 
 @api_router.post("/paper-reader", response_model=PaperReaderResponse)
@@ -995,7 +1023,7 @@ async def research_gap_export_full_docx(request: FullPlannerExportRequest) -> Re
 
 
 @api_router.get("/dashboard-summary", response_model=DashboardSummaryResponse)
-async def dashboard_summary() -> DashboardSummaryResponse:
+async def dashboard_summary(user_email: str = "") -> DashboardSummaryResponse:
     settings = get_settings()
     llm_providers = [
         provider
@@ -1006,23 +1034,19 @@ async def dashboard_summary() -> DashboardSummaryResponse:
         if configured
     ]
 
-    # Initialize fallback data
+    # Initialize counts with fallback zeros
     counts = {
         "papers_count": 0,
         "graph_nodes": 0,
         "relationships": 0
     }
 
-    try:
+    if all([settings.neo4j_uri, settings.neo4j_username, settings.neo4j_password]):
         try:
-            from backend.neo4j.queries import fetch_graph_summary_counts
-        except ModuleNotFoundError:
-            from neo4j.queries import fetch_graph_summary_counts
-        
-        counts = fetch_graph_summary_counts()
-    except Exception:
-        # Silently fallback to zeros if Neo4j read fails
-        pass
+            # Pass user_email or None to fetch_graph_summary_counts
+            counts = fetch_graph_summary_counts(user_email=user_email or None)
+        except GraphQueryError as exc:
+            print(f"Error fetching summary counts for {user_email}: {exc}")
 
     return DashboardSummaryResponse(
         entry_point="dashboard",
@@ -1038,7 +1062,7 @@ async def dashboard_summary() -> DashboardSummaryResponse:
 
 
 @api_router.get("/recent-papers", response_model=RecentPapersResponse)
-async def recent_papers() -> RecentPapersResponse:
+async def recent_papers(user_email: str = "") -> RecentPapersResponse:
     settings = get_settings()
     neo4j_configured = all(
         [
@@ -1056,7 +1080,7 @@ async def recent_papers() -> RecentPapersResponse:
         )
 
     try:
-        papers = fetch_recent_papers(limit=10)
+        papers = fetch_recent_papers(user_email=user_email, limit=10) if user_email else []
     except Exception:
         return RecentPapersResponse(
             status="ok",
@@ -1072,7 +1096,7 @@ async def recent_papers() -> RecentPapersResponse:
 
 
 @api_router.get("/graph-data", response_model=GraphDataResponse)
-async def graph_data() -> GraphDataResponse:
+async def graph_data(user_email: str = "") -> GraphDataResponse:
     settings = get_settings()
     neo4j_configured = all(
         [
@@ -1098,7 +1122,7 @@ async def graph_data() -> GraphDataResponse:
         )
 
     try:
-        graph_payload = fetch_graph_data()
+        graph_payload = fetch_graph_data(user_email=user_email or None)
         return GraphDataResponse(
             status="ok",
             papers_count=graph_payload["papers_count"],
@@ -1112,19 +1136,19 @@ async def graph_data() -> GraphDataResponse:
             edges=graph_payload["edges"],
             detail="Graph data loaded from Neo4j.",
         )
-    except Exception:
+    except GraphQueryError as exc:
         return GraphDataResponse(
-            status="ok",
-            papers_count=0,
-            total_nodes=0,
-            total_relationships=0,
-            topics_count=0,
-            methods_count=0,
-            datasets_count=0,
-            gaps_count=0,
+            status="unavailable",
+            papers_count=None,
+            total_nodes=None,
+            total_relationships=None,
+            topics_count=None,
+            methods_count=None,
+            datasets_count=None,
+            gaps_count=None,
             nodes=[],
             edges=[],
-            detail="Graph data is currently empty or unavailable.",
+            detail=str(exc),
         )
 
 from fastapi import Body
@@ -1149,7 +1173,7 @@ def signup(data: dict = Body(...)):
         )
 
     try:
-        create_user(name, email, password)
+        create_user(name, email, password, provider='local')
     except sqlite3.IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -1176,11 +1200,13 @@ def login(data: dict = Body(...)):
 
     user = find_user(email)
 
-    if user and user["password"] == password:
+    # Local login only for users with 'local' provider
+    if user and user.get("provider", "local") == "local" and user["password"] == password:
         return {
             "token": "demo-token",
             "email": user["email"],
             "name": user.get("name", ""),
+            "provider": "local"
         }
 
     raise HTTPException(
@@ -1189,6 +1215,61 @@ def login(data: dict = Body(...)):
     )
 
 
+@api_router.post("/auth/google-sync")
+def google_sync(data: dict = Body(...)):
+    try:
+        from backend.auth_db import find_user, create_user
+    except ModuleNotFoundError:
+        from auth_db import find_user, create_user
+
+    email = data.get("email", "").strip()
+    name = data.get("name", "").strip()
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is required for Google synchronization.",
+        )
+
+    user = find_user(email)
+    
+    if not user:
+        # Auto-create user with 'google' provider if not exists
+        try:
+            create_user(name, email, "google-oauth-managed", provider='google')
+            user = find_user(email)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to synchronize Google user: {str(exc)}",
+            ) from exc
+    return {
+        "token": "google-session-token",
+        "email": user["email"],
+        "name": user.get("name", ""),
+        "provider": user.get("provider", "google")
+    }
+
+
+@api_router.post("/auth/restore-legacy-data")
+def restore_legacy_data(data: dict = Body(...)):
+    email = data.get("email", "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+        
+    try:
+        results = restore_legacy_data_to_user(user_email=email)
+        return {
+            "status": "success",
+            "message": "Legacy research data has been restored.",
+            "results": results
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @api_router.post("/forgot-password")
 def forgot_password(data: dict = Body(...)):
-    return {"message": "reset link simulated"}
+    # With Firebase integration, the frontend will handle the email sending.
+    # This endpoint can now be used for validation or logging if needed.
+    return {"message": "Firebase handling password reset email."}

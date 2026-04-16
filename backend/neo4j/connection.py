@@ -86,7 +86,7 @@ def _build_driver_config(uri: str) -> tuple[str, dict[str, Any]]:
         scheme = "bolt"
 
     driver_config: dict[str, Any] = {
-        "max_connection_lifetime": 3600,
+        "max_connection_lifetime": 200,
         "max_connection_pool_size": 50,
         "connection_timeout": 30,
         "keep_alive": True,
@@ -159,16 +159,8 @@ def close_neo4j_driver() -> None:
     driver.close()
     get_neo4j_driver.cache_clear()
 
-from neo4j import GraphDatabase
-import os
 
-_driver = GraphDatabase.driver(
-    os.getenv("NEO4J_URI"),
-    auth=(
-        os.getenv("NEO4J_USERNAME"),
-        os.getenv("NEO4J_PASSWORD")
-    )
-)
+def get_driver() -> Driver:
+    """Backward-compatible alias for the shared cached driver factory."""
 
-def get_driver():
-    return _driver
+    return get_neo4j_driver()
