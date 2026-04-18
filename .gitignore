@@ -130,14 +130,14 @@ $RECYCLE.BIN/
 *.tar
 *.zip
 
-# --- AI Tools ---
+# --- AI Tools & Logs ---
 .antigravity/
 .gemini/
 .antigravityignore
 /scratch/
 .brain/
+*.log
 
 # --- Misc ---
 *_fixed_func.py
 temp_*.py
-*.log

@@ -51,7 +51,7 @@ function ClaimInput({ label, slot, value, setValue, mode, setMode, disabled }) {
             type="button"
             onClick={() => setMode("text")}
             className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
-              mode === "text" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-white"
+              mode === "text" ? "bg-panel text-ink shadow-sm border border-line" : "text-muted hover:text-ink"
             }`}
           >
             ✏️ TEXT
@@ -60,7 +60,7 @@ function ClaimInput({ label, slot, value, setValue, mode, setMode, disabled }) {
             type="button"
             onClick={() => setMode("file")}
             className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${
-              mode === "file" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-white"
+              mode === "file" ? "bg-panel text-ink shadow-sm border border-line" : "text-muted hover:text-ink"
             }`}
           >
             📎 FILE
@@ -73,20 +73,20 @@ function ClaimInput({ label, slot, value, setValue, mode, setMode, disabled }) {
           onChange={(e) => setValue(e.target.value)}
           placeholder={`Paste the ${slot} research claim`}
           rows={5}
-          className="w-full resize-none rounded-2xl border border-white/10 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-white/20"
+          className="w-full resize-none rounded-2xl border border-line bg-canvas px-4 py-3 text-sm font-medium text-ink outline-none transition placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/25"
         />
       ) : (
         <div className="space-y-3">
-          <div className="rounded-2xl border-2 border-dashed border-white/10 bg-white/5 p-1 transition hover:border-white/20">
+          <div className="rounded-2xl border-2 border-dashed border-line bg-canvas/30 p-1 transition hover:border-line">
             <FileUploadZone
               onTextExtracted={(text) => setValue(text)}
               disabled={disabled}
             />
           </div>
           {value && (
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Extracted preview</p>
-              <p className="mt-1 line-clamp-2 text-xs text-slate-300 font-medium">{value.slice(0, 200)}…</p>
+            <div className="rounded-xl border border-line bg-canvas/40 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Extracted preview</p>
+              <p className="mt-1 line-clamp-2 text-xs text-ink/70 font-medium">{value.slice(0, 200)}…</p>
             </div>
           )}
         </div>
@@ -191,24 +191,24 @@ function ContradictionDetectorPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-      <section className="overflow-hidden rounded-[32px] border border-white/80 bg-slate-950 text-white shadow-panel">
+      <section className="overflow-hidden rounded-[32px] border border-line bg-panel text-ink shadow-panel">
         <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-10">
           <div className="space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">
               Contradiction Analysis
             </p>
             <div className="space-y-3">
-              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
                 Contradiction Detector
               </h1>
-              <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+              <p className="max-w-2xl text-sm leading-7 text-muted sm:text-base">
                 Compare two research claims to decide whether they conflict, identify the clashing statements, and
                 explain the confidence level.
               </p>
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-panel-soft backdrop-blur">
+          <div className="rounded-[28px] border border-line bg-canvas/30 p-5 shadow-panel-soft backdrop-blur">
             <form className="space-y-4" onSubmit={handleSubmit}>
               <ClaimInput
                 label="Claim A — First Research Claim"
@@ -231,7 +231,7 @@ function ContradictionDetectorPage() {
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-accent/20 border border-line px-5 py-3 text-sm font-semibold text-accent transition hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {status === "loading" ? "Running Detector..." : "Run Contradiction Detector"}
               </button>
@@ -241,11 +241,11 @@ function ContradictionDetectorPage() {
       </section>
 
       <section className="grid gap-8 lg:grid-cols-[0.8fr_2fr]">
-        <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel h-fit sticky top-8">
+        <aside className="rounded-[28px] border border-line bg-panel p-6 shadow-panel h-fit sticky top-8">
           <div className="space-y-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Session State</p>
-              <h2 className="mt-2 text-lg font-bold text-slate-900">Current Detection</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-muted">Session State</p>
+              <h2 className="mt-2 text-lg font-bold text-ink">Current Detection</h2>
             </div>
             <dl className="space-y-4">
               {[
@@ -255,9 +255,9 @@ function ContradictionDetectorPage() {
                 { label: "Total Items", value: sectionCount, large: false },
                 { label: "Status", value: status, large: false },
               ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
-                  <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{item.label}</dt>
-                  <dd className={`mt-1 font-semibold text-slate-800 ${item.large ? 'text-3xl' : 'text-sm'}`}>{item.value}</dd>
+                <div key={item.label} className="rounded-2xl border border-line bg-canvas/50 p-4">
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">{item.label}</dt>
+                  <dd className={`mt-1 font-semibold text-ink ${item.large ? 'text-3xl' : 'text-sm'}`}>{item.value}</dd>
                 </div>
               ))}
             </dl>
@@ -265,12 +265,12 @@ function ContradictionDetectorPage() {
         </aside>
 
         <section className="space-y-6">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel">
+          <div className="rounded-[28px] border border-line bg-panel p-6 shadow-panel">
             <div className="flex items-center gap-3">
-              <div className={`h-2 w-2 rounded-full ${status === 'loading' ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`} />
-              <p className="text-sm font-bold text-slate-700">{message}</p>
+              <div className={`h-2 w-2 rounded-full ${status === 'loading' ? 'bg-accent animate-pulse' : 'bg-muted'}`} />
+              <p className="text-sm font-bold text-ink">{message}</p>
             </div>
-            {error ? <p className="mt-3 text-sm font-bold text-red-600">{error}</p> : null}
+            {error ? <p className="mt-3 text-sm font-bold text-red-500">{error}</p> : null}
           </div>
 
           {result ? (
@@ -291,17 +291,17 @@ function ContradictionDetectorPage() {
               </div>
 
               {/* Unified Export Area */}
-              <div className="overflow-hidden rounded-[32px] border border-slate-900 bg-slate-950 p-8 shadow-2xl text-white">
+              <div className="overflow-hidden rounded-[32px] border border-line bg-panel p-8 shadow-2xl text-ink">
                 <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
                   <div className="space-y-1 text-center sm:text-left">
                     <h3 className="text-xl font-bold">Consolidated Research Report</h3>
-                    <p className="text-sm text-slate-400">Download the full analysis as a structured document.</p>
+                    <p className="text-sm text-muted">Download the full analysis as a structured document.</p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-3">
                     <button
                       onClick={() => handleFullExport("pdf")}
                       disabled={actionState.globalExport === "pdf"}
-                      className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-full border border-line bg-canvas px-6 py-3 text-sm font-bold text-ink transition hover:bg-line active:scale-95 disabled:opacity-50"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                       {actionState.globalExport === "pdf" ? "Exporting PDF..." : "Export PDF"}
@@ -309,7 +309,7 @@ function ContradictionDetectorPage() {
                     <button
                       onClick={() => handleFullExport("docx")}
                       disabled={actionState.globalExport === "docx"}
-                      className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/20 active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-full border border-line bg-canvas px-6 py-3 text-sm font-bold text-ink transition hover:bg-line active:scale-95 disabled:opacity-50"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                       {actionState.globalExport === "docx" ? "Exporting DOCX..." : "Export DOCX"}
@@ -320,12 +320,12 @@ function ContradictionDetectorPage() {
             </div>
 
           ) : (
-            <div className="rounded-[32px] border border-dashed border-slate-200 bg-white/50 p-16 text-center shadow-sm">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-slate-300">
+            <div className="rounded-[32px] border border-dashed border-line bg-panel p-16 text-center shadow-sm">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-canvas text-muted border border-line">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               </div>
-              <p className="text-xl font-bold text-slate-800">No contradiction output yet.</p>
-              <p className="mt-2 text-sm leading-7 text-slate-500 font-medium">
+              <p className="text-xl font-bold text-ink">No contradiction output yet.</p>
+              <p className="mt-2 text-sm leading-7 text-muted font-medium">
                 Paste or upload two research claims (PDF · DOCX · TXT) and run the detector.
               </p>
             </div>

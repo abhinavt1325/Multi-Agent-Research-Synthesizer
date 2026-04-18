@@ -245,29 +245,29 @@ function GraphExplorerPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-      <section className="overflow-hidden rounded-[32px] border border-white/80 bg-slate-950 text-white shadow-panel">
+      <section className="overflow-hidden rounded-[32px] border border-line bg-panel text-ink shadow-panel">
         <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-10 lg:py-10">
           <div className="space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Shared Graph Intelligence</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">Shared Graph Intelligence</p>
             <div className="space-y-3">
-              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">Graph Explorer</h1>
-              <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Graph Explorer</h1>
+              <p className="max-w-2xl text-sm leading-7 text-muted sm:text-base">
                 Inspect live Neo4j nodes for users, topics, papers, methods, datasets, and gaps from one interactive canvas.
                 Zoom the graph, pan across clusters, and click any node to inspect its actual stored properties.
               </p>
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-panel-soft backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">Graph Status</p>
-            <p className="mt-3 text-2xl font-semibold tracking-tight text-white capitalize">{status}</p>
-            <p className="mt-3 text-sm leading-7 text-slate-300">
+          <div className="rounded-[28px] border border-line bg-canvas/30 p-5 shadow-panel-soft backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">Graph Status</p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-ink capitalize">{status}</p>
+            <p className="mt-3 text-sm leading-7 text-muted">
               {error || graphData?.detail || "Loading graph-backed data from the backend."}
             </p>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-300">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Zoom</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Pan</span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2">Node Details</span>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted">
+              <span className="rounded-full border border-line bg-canvas/50 px-3 py-2">Zoom</span>
+              <span className="rounded-full border border-line bg-canvas/50 px-3 py-2">Pan</span>
+              <span className="rounded-full border border-line bg-canvas/50 px-3 py-2">Node Details</span>
             </div>
           </div>
         </div>
@@ -304,8 +304,8 @@ function GraphExplorerPage() {
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">Live Neo4j topology</h2>
             </div>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="flex items-center gap-2 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
+                <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
                 Live Connection
               </span>
             </div>
@@ -328,7 +328,7 @@ function GraphExplorerPage() {
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900/10 via-transparent to-transparent" />
               
               {/* Floating Graph Toolbar */}
-              <div className="absolute bottom-6 right-6 z-10 flex items-center gap-3 rounded-[24px] border border-white/10 bg-slate-900/80 p-3 shadow-2xl backdrop-blur-md transition-all group-hover:bg-slate-900">
+              <div className="absolute bottom-6 right-6 z-10 flex items-center gap-3 rounded-[24px] border border-line bg-panel/90 p-3 shadow-2xl backdrop-blur-md transition-all group-hover:bg-panel">
                 <div className="flex items-center gap-2 border-r border-white/10 pr-3">
                   <button
                     type="button"
@@ -562,9 +562,9 @@ function GraphExplorerPage() {
               )}
             </div>
           ) : (
-            <div className="mt-5 rounded-[24px] border border-dashed border-line bg-white/70 p-12 text-center">
+            <div className="mt-5 rounded-[24px] border border-dashed border-line bg-panel/50 p-12 text-center">
               <p className="text-lg font-medium text-ink">No graph nodes available for exploration.</p>
-              <p className="mt-2 text-sm leading-7 text-slate-500">
+              <p className="mt-2 text-sm leading-7 text-muted">
                 {status === "error"
                   ? error
                   : graphData?.detail || "Create and link Neo4j nodes to render the interactive graph."}
@@ -579,7 +579,7 @@ function GraphExplorerPage() {
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
               {selectedNode ? selectedNode.display_name : "No node selected"}
             </h2>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
+            <p className="mt-3 text-sm leading-7 text-muted">
               Click any live node in the graph to inspect the properties stored in Neo4j for that entity.
             </p>
           </div>
@@ -587,7 +587,7 @@ function GraphExplorerPage() {
           {selectedNode ? (
             <div className="mt-6 space-y-4">
               {selectedNode.label === "Paper" && (
-                <div className="rounded-[24px] border border-red-100/50 bg-red-50/30 p-5 flex items-center justify-between">
+                <div className="rounded-[24px] border border-red-500/20 bg-red-500/10 p-5 flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500">Danger Zone</p>
                   <button
                     onClick={handleDeleteNode}
@@ -597,24 +597,24 @@ function GraphExplorerPage() {
                         ? "Remove this paper from your research memory"
                         : "paper_id unavailable \u2014 cannot delete"
                     }
-                    className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-xl border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 shadow-sm transition hover:bg-red-50 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 flex-shrink-0 rounded-xl border border-red-500/30 bg-red-500/20 px-3 py-1.5 text-xs font-bold text-red-400 shadow-sm transition hover:bg-red-500/30 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     Delete Paper
                   </button>
                 </div>
               )}
-              <div className="rounded-[24px] border border-line/80 bg-white/80 p-5">
+              <div className="rounded-[24px] border border-line bg-canvas/30 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Node Type</p>
                 <p className="mt-2 text-lg font-semibold text-ink">{selectedNode.label}</p>
               </div>
 
-              <div className="rounded-[24px] border border-line/80 bg-white/80 p-5">
+              <div className="rounded-[24px] border border-line bg-canvas/30 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Node Id</p>
-                <p className="mt-2 break-all text-sm font-medium text-slate-700">{selectedNode.node_id}</p>
+                <p className="mt-2 break-all text-sm font-medium text-ink">{selectedNode.node_id}</p>
               </div>
 
-              <div className="rounded-[24px] border border-line/80 bg-white/80 p-5">
+              <div className="rounded-[24px] border border-line bg-canvas/30 p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Properties</p>
                 <div className="mt-4 space-y-3">
                   {Object.entries(selectedNode.details || {}).length ? (
@@ -642,7 +642,7 @@ function GraphExplorerPage() {
                                 href={selectedNode.details.pdf_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50 active:scale-95"
+                                className="inline-flex items-center gap-2 rounded-xl border border-indigo-400 bg-indigo-500/10 px-4 py-2.5 text-xs font-bold text-indigo-400 transition hover:bg-indigo-500/20 active:scale-95"
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                                 View PDF
@@ -658,11 +658,11 @@ function GraphExplorerPage() {
                         if (value === null || value === undefined || value === "") return null;
 
                         return (
-                          <div key={key} className="rounded-2xl border border-line/70 bg-panel px-4 py-3">
+                          <div key={key} className="rounded-2xl border border-line bg-panel px-4 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                               {formatLabelKey(key)}
                             </p>
-                            <p className="mt-2 break-words text-sm leading-6 text-slate-700">
+                            <p className="mt-2 break-words text-sm leading-6 text-ink/90">
                               {typeof value === "object" ? JSON.stringify(value) : String(value)}
                             </p>
                           </div>
@@ -670,15 +670,15 @@ function GraphExplorerPage() {
                       })}
                     </>
                   ) : (
-                    <p className="text-sm text-slate-500">This node does not expose additional properties yet.</p>
+                    <p className="text-sm text-muted">This node does not expose additional properties yet.</p>
                   )}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="mt-6 rounded-[24px] border border-dashed border-line bg-white/70 p-10 text-center">
+            <div className="mt-6 rounded-[24px] border border-dashed border-line bg-panel p-10 text-center">
               <p className="text-lg font-medium text-ink">No node selected.</p>
-              <p className="mt-2 text-sm leading-7 text-slate-500">
+              <p className="mt-2 text-sm leading-7 text-muted">
                 Once graph data is available, selecting a node will reveal its live details here.
               </p>
             </div>

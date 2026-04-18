@@ -1,8 +1,10 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Route → display label map ───────────────────────────────────────────────
 const ROUTE_TITLES = {
+  "/smart-researcher": "Smart Researcher",
   "/dashboard": "Dashboard",
   "/planner": "Planner",
   "/literature-hunter": "Literature Hunter",
@@ -15,6 +17,21 @@ const ROUTE_TITLES = {
 
 // ─── Navigation items ─────────────────────────────────────────────────────────
 const NAV_ITEMS = [
+  {
+    group: "Flagship",
+    items: [
+      {
+        label: "Smart Researcher",
+        path: "/smart-researcher",
+        flagship: true,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        ),
+      },
+    ],
+  },
   {
     group: "Overview",
     items: [
@@ -137,7 +154,7 @@ function AuthenticatedShell() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'Inter', 'IBM Plex Sans', 'Segoe UI', sans-serif", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: "#0B1220", fontFamily: "'Inter', 'IBM Plex Sans', 'Segoe UI', sans-serif", display: "flex", flexDirection: "column" }}>
 
       {/* ── Fixed top title bar (Dark, premium) ───────────────────────── */}
       <header
@@ -152,7 +169,8 @@ function AuthenticatedShell() {
           display: "flex",
           alignItems: "center",
           padding: "0 1.25rem 0 0",
-          background: "#0f172a", // Dark neutral graphite/slate
+          background: "rgba(11, 18, 32, 0.85)", // Dark translucent background
+          backdropFilter: "blur(12px)",
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
         }}
@@ -314,12 +332,12 @@ function AuthenticatedShell() {
             zIndex: 40,
             display: "flex",
             flexDirection: "column",
-            background: "#ffffff",
-            borderRight: "1px solid #e8ecf0",
+            background: "transparent",
+            borderRight: "1px solid rgba(255, 255, 255, 0.05)",
             overflowY: "auto",
             overflowX: "hidden",
             scrollbarWidth: "thin",
-            scrollbarColor: "#e2e8f0 transparent",
+            scrollbarColor: "rgba(255,255,255,0.1) transparent",
           }}
         >
           <nav style={{ padding: "1.25rem 0.75rem", flex: 1 }} aria-label="Main navigation">
@@ -342,41 +360,76 @@ function AuthenticatedShell() {
                     <NavLink
                       key={item.path}
                       to={item.path}
-                      style={({ isActive }) => ({
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.65rem",
-                        padding: "0.6rem 0.75rem",
-                        borderRadius: "8px",
-                        fontSize: "0.85rem",
-                        fontWeight: isActive ? 600 : 500,
-                        color: isActive ? "#4f46e5" : "#475569",
-                        background: isActive ? "#eef2ff" : "transparent",
-                        textDecoration: "none",
-                        transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                        transform: "translateX(0)",
-                      })}
+                      style={({ isActive }) => {
+                        const isFlagship = !!item.flagship;
+                        if (isFlagship) {
+                          return {
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.65rem",
+                            padding: "0.65rem 0.85rem",
+                            borderRadius: "10px",
+                            fontSize: "0.88rem",
+                            fontWeight: 700,
+                            color: isActive ? "#fff" : "#f9a8d4",
+                            background: isActive
+                              ? "linear-gradient(135deg, rgba(236,72,153,0.35) 0%, rgba(219,39,119,0.2) 100%)"
+                              : "linear-gradient(135deg, rgba(236,72,153,0.18) 0%, rgba(99,102,241,0.1) 100%)",
+                            border: "1px solid rgba(236,72,153,0.3)",
+                            textDecoration: "none",
+                            transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                            boxShadow: isActive
+                              ? "0 0 20px rgba(236,72,153,0.3)"
+                              : "0 0 10px rgba(236,72,153,0.1)",
+                          };
+                        }
+                        return {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.65rem",
+                          padding: "0.6rem 0.75rem",
+                          borderRadius: "8px",
+                          fontSize: "0.85rem",
+                          fontWeight: isActive ? 600 : 500,
+                          color: isActive ? "#ec4899" : "#94a3b8",
+                          background: isActive ? "rgba(236, 72, 153, 0.1)" : "transparent",
+                          textDecoration: "none",
+                          transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                          transform: "translateX(0)",
+                          ...(isActive && { boxShadow: "0 0 12px rgba(236, 72, 153, 0.2)" }),
+                        };
+                      }}
                       onMouseEnter={(e) => {
+                        if (item.flagship) {
+                          e.currentTarget.style.boxShadow = "0 0 24px rgba(236,72,153,0.4)";
+                          e.currentTarget.style.borderColor = "rgba(236,72,153,0.55)";
+                          return;
+                        }
                         e.currentTarget.style.transform = "translateX(5px)";
-                        if (!e.currentTarget.style.background.includes("eef2ff")) {
-                          e.currentTarget.style.background = "#f8fafc";
-                          e.currentTarget.style.color = "#1e293b";
+                        if (!e.currentTarget.style.background.includes("rgba(236, 72, 153, 0.1)")) {
+                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                          e.currentTarget.style.color = "#f8fafc";
                         }
                       }}
                       onMouseLeave={(e) => {
+                        if (item.flagship) {
+                          e.currentTarget.style.boxShadow = "0 0 10px rgba(236,72,153,0.1)";
+                          e.currentTarget.style.borderColor = "rgba(236,72,153,0.3)";
+                          return;
+                        }
                         e.currentTarget.style.transform = "translateX(0)";
-                        if (!e.currentTarget.style.background.includes("eef2ff")) {
+                        if (!e.currentTarget.style.background.includes("rgba(236, 72, 153, 0.1)")) {
                           e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.color = "#475569";
+                          e.currentTarget.style.color = "#94a3b8";
                         }
                       }}
                     >
                       {({ isActive }) => (
                         <>
-                          <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
+                          <span style={{ flexShrink: 0, opacity: 1, color: item.flagship ? "#ec4899" : undefined }}>
                             {item.icon}
                           </span>
-                          <span style={{ truncate: true }}>{item.label}</span>
+                          <span>{item.label}</span>
                         </>
                       )}
                     </NavLink>
@@ -398,13 +451,24 @@ function AuthenticatedShell() {
           }}
         >
           <div style={{ flex: 1, padding: "2.5rem 2.5rem" }}>
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                style={{ height: "100%" }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* ── Inline bottom footer ────────────────────────────────────────── */}
           <footer
             style={{
-              borderTop: "1px solid #e2e8f0",
+              borderTop: "1px solid rgba(255, 255, 255, 0.05)",
               padding: "1.5rem 2.5rem",
               marginTop: "auto", // Push to bottom if content is short
             }}

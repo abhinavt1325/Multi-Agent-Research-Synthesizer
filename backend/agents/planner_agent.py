@@ -7,8 +7,10 @@ from typing import Any
 from urllib import error, request
 
 try:
+    from backend.agents.gemini_support import call_gemini_with_fallback
     from backend.config.settings import get_settings
 except ModuleNotFoundError:  # pragma: no cover - supports execution from backend/
+    from agents.gemini_support import call_gemini_with_fallback
     from config.settings import get_settings
 
 
@@ -17,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GEMINI_GENERATE_CONTENT_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent"
 )
 REQUEST_TIMEOUT_SECONDS = 25
 
@@ -242,9 +244,15 @@ def run_planner_agent(research_topic: str) -> dict[str, Any]:
             LOGGER.exception("Groq planner request failed.")
             provider_errors.append(f"Groq: {exc}")
 
-    if settings.gemini_api_key:
+    if settings.has_gemini_api_key:
         try:
-            result = _call_gemini_planner(normalized_topic, settings.gemini_api_key)
+            result = call_gemini_with_fallback(
+                agent_name="Planner",
+                settings=settings,
+                logger=LOGGER,
+                preferred_slot="primary",
+                call_with_api_key=lambda api_key: _call_gemini_planner(normalized_topic, api_key),
+            )
             return {
                 "provider": "gemini",
                 **result,
@@ -253,9 +261,9 @@ def run_planner_agent(research_topic: str) -> dict[str, Any]:
             LOGGER.exception("Gemini planner request failed.")
             provider_errors.append(f"Gemini: {exc}")
 
-    if not settings.groq_api_key and not settings.gemini_api_key:
+    if not settings.groq_api_key and not settings.has_gemini_api_key:
         raise PlannerAgentServiceError(
-            "Planner is unavailable. Set GROQ_API_KEY or GEMINI_API_KEY.",
+            "Planner is unavailable. Set GROQ_API_KEY, GEMINI_API_KEY_PRIMARY, GEMINI_API_KEY_SECONDARY, or GEMINI_API_KEY.",
             status_code=503,
         )
 

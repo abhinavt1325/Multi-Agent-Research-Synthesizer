@@ -129,7 +129,7 @@ export default function FileUploadZone({ label, onTextExtracted, disabled, class
   return (
     <div className={`space-y-3 ${className}`}>
       {label && (
-        <span className="text-sm font-bold text-slate-700">{label}</span>
+        <span className="text-sm font-bold text-ink">{label}</span>
       )}
       <div
         role="button"
@@ -143,13 +143,12 @@ export default function FileUploadZone({ label, onTextExtracted, disabled, class
         className={[
           "relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition",
           dragging
-            ? "border-indigo-500 bg-indigo-50/30 scale-[1.01]"
-            : "border-slate-300 bg-slate-50/50 hover:border-slate-400 hover:bg-slate-50",
+            ? "border-accent bg-accent/10 scale-[1.01]"
+            : "border-line/70 bg-canvas/30 hover:border-line hover:bg-canvas/50",
           disabled ? "cursor-not-allowed opacity-50" : "",
         ].join(" ")}
       >
-        {/* Upload cloud icon */}
-        <div className={`rounded-full p-3 transition ${dragging ? "bg-indigo-100 text-indigo-600" : "bg-white text-slate-500 shadow-sm"}`}>
+        <div className={`rounded-full p-3 transition ${dragging ? "bg-accent/20 text-accent" : "bg-panel border border-line text-muted shadow-sm"}`}>
           <svg
             className="h-7 w-7"
             fill="none"
@@ -166,24 +165,24 @@ export default function FileUploadZone({ label, onTextExtracted, disabled, class
         </div>
 
         {processing ? (
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-800" />
+          <div className="flex items-center gap-2 text-sm font-bold text-ink">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
             Extracting text…
           </div>
         ) : fileName ? (
           <div className="flex flex-col items-center gap-1">
-            <span className="max-w-[180px] truncate text-sm font-bold text-emerald-700">
+            <span className="max-w-[180px] truncate text-sm font-bold text-emerald-400">
               {fileName}
             </span>
-            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Successfully Loaded</span>
+            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Successfully Loaded</span>
           </div>
         ) : (
           <div className="space-y-1">
-            <p className="text-sm font-bold text-slate-800">
+            <p className="text-sm font-bold text-ink">
               Drop research paper or{" "}
-              <span className="text-indigo-600 underline underline-offset-4 decoration-2">browse files</span>
+              <span className="text-accent underline underline-offset-4 decoration-2">browse files</span>
             </p>
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">PDF · DOCX · TXT — up to 10 MB</p>
+            <p className="text-[11px] font-bold text-muted uppercase tracking-tight">PDF · DOCX · TXT — up to 10 MB</p>
           </div>
         )}
 
@@ -198,7 +197,7 @@ export default function FileUploadZone({ label, onTextExtracted, disabled, class
       </div>
 
       {error && (
-        <p className="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">
+        <p className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-bold text-red-400">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           {error}
         </p>

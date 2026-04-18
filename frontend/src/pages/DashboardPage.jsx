@@ -89,7 +89,7 @@ function DashboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-      <section className="rounded-[32px] border border-white/80 bg-slate-950 px-6 py-8 text-white shadow-panel sm:px-8 lg:px-10">
+      <section className="rounded-[32px] border border-line bg-panel px-6 py-8 text-white shadow-panel sm:px-8 lg:px-10">
         <div className="flex flex-col gap-6">
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Dashboard</p>
@@ -153,26 +153,29 @@ function DashboardPage() {
                     flexDirection: "column",
                     padding: "1rem 1.25rem",
                     borderRadius: "16px",
-                    border: "1px solid #e2e8f0",
-                    background: "#ffffff",
+                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                    background: "rgba(17, 24, 39, 0.6)",
+                    backdropFilter: "blur(10px)",
                     textDecoration: "none",
                     transition: "border-color 0.15s, box-shadow 0.15s, transform 0.15s"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#c7d2fe";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.03)";
-                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.borderColor = "rgba(236, 72, 153, 0.45)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(236, 72, 153, 0.1)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.background = "rgba(17, 24, 39, 0.9)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "#e2e8f0";
+                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.05)";
                     e.currentTarget.style.boxShadow = "none";
                     e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.background = "rgba(17, 24, 39, 0.6)";
                   }}
                 >
-                  <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#0f172a", marginBottom: "0.25rem" }}>
-                    {title} <span style={{ color: "#94a3b8", fontSize: "0.8rem", marginLeft: "2px" }}>&rarr;</span>
+                  <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "#f8fafc", marginBottom: "0.25rem" }}>
+                    {title} <span style={{ color: "#ec4899", fontSize: "0.8rem", marginLeft: "4px" }}>&rarr;</span>
                   </span>
-                  <span style={{ fontSize: "0.75rem", color: "#64748b", lineHeight: 1.4 }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8", lineHeight: 1.4 }}>
                     {desc}
                   </span>
                 </Link>
@@ -241,7 +244,7 @@ function DashboardPage() {
             {recentPapers.map((paper) => (
               <article
                 key={`${paper.paper_id || paper.title}-${paper.year || "na"}`}
-                className="hover-lift rounded-[24px] border border-line/80 bg-white/75 p-5"
+                className="hover-lift rounded-[24px] border border-line bg-panel p-5"
               >
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2 text-xs font-medium uppercase tracking-[0.16em] text-muted">
@@ -260,7 +263,7 @@ function DashboardPage() {
                     onClick={() => handleDeletePaper(paper.paper_id)}
                     disabled={!paper.paper_id}
                     title={paper.paper_id ? "Remove from research memory" : "paper_id unavailable — cannot delete"}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-red-100 bg-red-50/50 px-4 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-1.5 text-xs font-bold text-red-500 transition hover:bg-red-500/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     Delete
@@ -270,7 +273,7 @@ function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="mt-6 rounded-[24px] border border-dashed border-line bg-white/60 p-10 text-center">
+          <div className="mt-6 rounded-[24px] border border-dashed border-line bg-panel/50 p-10 text-center">
             <p className="text-lg font-medium text-ink">No recent papers available.</p>
             <p className="mt-2 text-sm leading-7 text-slate-500">
               {status === "error"

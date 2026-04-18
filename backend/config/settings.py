@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
 
@@ -17,11 +18,28 @@ load_dotenv(BASE_DIR / "backend" / ".env", override=False)
 class Settings:
     groq_api_key: str | None
     gemini_api_key: str | None
+    gemini_api_key_primary: str | None
+    gemini_api_key_secondary: str | None
     neo4j_uri: str | None
     neo4j_username: str | None
     neo4j_password: str | None
     semantic_scholar_api_key: str | None
     frontend_origins: list[str]
+
+    @property
+    def has_gemini_api_key(self) -> bool:
+        return any(
+            (
+                self.gemini_api_key_primary,
+                self.gemini_api_key_secondary,
+                self.gemini_api_key,
+            )
+        )
+
+    def gemini_key_for(self, slot: Literal["primary", "secondary"]) -> str | None:
+        if slot == "primary":
+            return self.gemini_api_key_primary or self.gemini_api_key
+        return self.gemini_api_key_secondary or self.gemini_api_key
 
 
 def _get_env(name: str) -> str | None:
@@ -51,6 +69,8 @@ def get_settings() -> Settings:
     return Settings(
         groq_api_key=_get_env("GROQ_API_KEY"),
         gemini_api_key=_get_env("GEMINI_API_KEY"),
+        gemini_api_key_primary=_get_env("GEMINI_API_KEY_PRIMARY"),
+        gemini_api_key_secondary=_get_env("GEMINI_API_KEY_SECONDARY"),
         neo4j_uri=_get_env("NEO4J_URI"),
         neo4j_username=_get_env("NEO4J_USERNAME"),
         neo4j_password=_get_env("NEO4J_PASSWORD"),

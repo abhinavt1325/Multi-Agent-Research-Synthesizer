@@ -142,15 +142,15 @@ function EvidenceComparatorPage() {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
       {/* ── Hero Section ─────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[32px] border border-white/80 bg-slate-950 text-white shadow-panel">
+      <section className="overflow-hidden rounded-[32px] border border-line bg-panel text-ink shadow-panel">
         <div className="grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1.2fr_0.8fr] lg:px-10 lg:py-10">
           <div className="space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Advanced Synthesis Agent</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">Advanced Synthesis Agent</p>
             <div className="space-y-4">
-              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              <h1 className="text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
                 Evidence Comparator
               </h1>
-              <p className="max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
+              <p className="max-w-xl text-sm leading-7 text-muted sm:text-base">
                 Compare multiple research papers to identify consensus, divergence, 
                 methodological variation, and strongest evidence patterns.
               </p>
@@ -158,7 +158,7 @@ function EvidenceComparatorPage() {
             {/* Capability Chips */}
             <div className="flex flex-wrap gap-2">
               {["Multi-file comparison", "Consensus detection", "Method divergence", "Evidence clustering"].map((chip) => (
-                <span key={chip} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
+                <span key={chip} className="rounded-full border border-line bg-canvas/30 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
                   • {chip}
                 </span>
               ))}
@@ -166,12 +166,12 @@ function EvidenceComparatorPage() {
           </div>
 
           <div className="flex flex-col justify-center gap-4">
-            <div className="rounded-[24px] border border-white/10 bg-white/5 p-6 backdrop-blur">
-              <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Comparison Scope</label>
+            <div className="rounded-[24px] border border-line bg-canvas/30 p-6 backdrop-blur">
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted">Comparison Scope</label>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-slate-200">Number of papers</span>
+                <span className="text-sm text-ink">Number of papers</span>
                 <select 
-                  className="rounded-xl border border-white/20 bg-slate-900 px-3 py-1.5 text-sm font-medium text-white outline-none focus:border-white"
+                  className="rounded-xl border border-line bg-canvas px-3 py-1.5 text-sm font-medium text-ink outline-none focus:border-accent"
                   value={fileCount}
                   onChange={(e) => handleFileCountChange(parseInt(e.target.value, 10))}
                 >
@@ -187,21 +187,21 @@ function EvidenceComparatorPage() {
       <section className="grid gap-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {summaries.map((s, idx) => (
-            <div key={idx} className="flex flex-col rounded-[28px] border border-slate-200 bg-white p-5 shadow-panel transition hover:border-slate-400">
+            <div key={idx} className="flex flex-col rounded-[28px] border border-line bg-panel p-5 shadow-panel transition hover:border-line/80">
               <div className="mb-4 flex items-center justify-between">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white shadow-sm">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-canvas border border-line text-[10px] font-bold text-ink shadow-sm">
                   {idx + 1}
                 </span>
-                <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <div className="flex gap-1 rounded-xl border border-line bg-canvas p-1">
                   <button
                     onClick={() => updateSummary(idx, { mode: "text" })}
-                    className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${s.mode === "text" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"}`}
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${s.mode === "text" ? "bg-panel text-ink shadow-sm border border-line" : "text-muted hover:text-ink"}`}
                   >
                     TEXT
                   </button>
                   <button
                     onClick={() => updateSummary(idx, { mode: "file" })}
-                    className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${s.mode === "file" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"}`}
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition ${s.mode === "file" ? "bg-panel text-ink shadow-sm border border-line" : "text-muted hover:text-ink"}`}
                   >
                     FILE
                   </button>
@@ -211,22 +211,22 @@ function EvidenceComparatorPage() {
               <div className="flex-1">
                 {s.mode === "text" ? (
                   <textarea
-                    className="h-32 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-800 outline-none placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-100"
+                    className="h-32 w-full resize-none rounded-2xl border border-line bg-canvas px-4 py-3 text-xs font-medium text-ink outline-none placeholder:text-muted focus:border-accent focus:ring-1 focus:ring-accent/20"
                     placeholder={`Paste Paper ${idx + 1} summary or text...`}
                     value={s.text}
                     onChange={(e) => updateSummary(idx, { text: e.target.value })}
                   />
                 ) : (
                   <div className="space-y-3">
-                    <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-1 transition hover:border-slate-400">
+                    <div className="rounded-2xl border-2 border-dashed border-line bg-canvas/30 p-1 transition hover:border-accent/40">
                       <FileUploadZone
                         onTextExtracted={(text) => updateSummary(idx, { text })}
                         disabled={status === "loading"}
                       />
                     </div>
                     {s.text && (
-                      <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                        <p className="line-clamp-2 text-[10px] font-medium text-slate-700">{s.text.slice(0, 150)}...</p>
+                      <div className="rounded-xl border border-line bg-canvas/50 p-3">
+                        <p className="line-clamp-2 text-[10px] font-medium text-ink/80">{s.text.slice(0, 150)}...</p>
                       </div>
                     )}
                   </div>
@@ -248,12 +248,12 @@ function EvidenceComparatorPage() {
           {summaries.length < 10 && (
             <button 
               onClick={addDocument}
-              className="flex flex-col items-center justify-center gap-3 rounded-[28px] border-2 border-dashed border-slate-300 bg-slate-50/50 p-10 text-slate-500 transition hover:border-slate-500 hover:bg-slate-50 hover:text-slate-700 shadow-sm"
+              className="flex flex-col items-center justify-center gap-3 rounded-[28px] border-2 border-dashed border-line bg-panel p-10 text-muted transition hover:border-accent hover:bg-canvas hover:text-ink shadow-sm"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md border border-slate-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-canvas shadow-md border border-line text-ink">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-600">Add Comparison Slot</span>
+              <span className="text-xs font-bold uppercase tracking-widest">Add Comparison Slot</span>
             </button>
           )}
         </div>
@@ -262,11 +262,11 @@ function EvidenceComparatorPage() {
           <button
             onClick={handleSubmit}
             disabled={status === "loading"}
-            className="group flex items-center gap-3 rounded-full bg-slate-950 px-12 py-5 text-sm font-bold text-white shadow-2xl transition hover:scale-[1.02] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
+            className="group flex items-center gap-3 rounded-full border border-line bg-accent/20 px-12 py-5 text-sm font-bold text-accent shadow-2xl transition hover:scale-[1.02] hover:bg-accent/40 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
           >
             {status === "loading" ? (
               <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent/20 border-t-accent" />
                 Processing workspace...
               </>
             ) : (
@@ -281,12 +281,12 @@ function EvidenceComparatorPage() {
 
       {/* ── Results Section ─────────────────────────────────────────────── */}
       <section className="grid gap-6">
-        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-[28px] border border-line bg-panel p-6 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className={`h-2 w-2 rounded-full ${status === 'loading' ? 'bg-indigo-500 animate-pulse' : 'bg-slate-300'}`} />
-            <p className="text-sm font-bold text-slate-800">{message}</p>
+            <div className={`h-2 w-2 rounded-full ${status === 'loading' ? 'bg-accent animate-pulse' : 'bg-muted'}`} />
+            <p className="text-sm font-bold text-ink">{message}</p>
           </div>
-          {error && <p className="mt-4 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-600 border border-red-100">{error}</p>}
+          {error && <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm font-bold text-red-500">{error}</p>}
         </div>
 
         {result ? (
@@ -307,17 +307,17 @@ function EvidenceComparatorPage() {
             </div>
 
             {/* Unified Export Area */}
-            <div className="overflow-hidden rounded-[32px] border border-slate-900 bg-slate-950 p-8 shadow-2xl text-white">
+            <div className="overflow-hidden rounded-[32px] border border-line bg-panel p-8 shadow-2xl text-ink">
               <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
                 <div className="space-y-1 text-center sm:text-left">
                   <h3 className="text-xl font-bold">Consolidated Research Report</h3>
-                  <p className="text-sm text-slate-400">Download the full synthesis as a structured document.</p>
+                  <p className="text-sm text-muted">Download the full synthesis as a structured document.</p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-3">
                   <button
                     onClick={() => handleFullExport("pdf")}
                     disabled={actionState.globalExport === "pdf"}
-                    className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-full border border-line bg-canvas px-6 py-3 text-sm font-bold text-ink transition hover:bg-line active:scale-95 disabled:opacity-50"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     {actionState.globalExport === "pdf" ? "Exporting PDF..." : "Export PDF"}
@@ -325,7 +325,7 @@ function EvidenceComparatorPage() {
                   <button
                     onClick={() => handleFullExport("docx")}
                     disabled={actionState.globalExport === "docx"}
-                    className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/20 active:scale-95 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-full border border-line bg-canvas px-6 py-3 text-sm font-bold text-ink transition hover:bg-line active:scale-95 disabled:opacity-50"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     {actionState.globalExport === "docx" ? "Exporting DOCX..." : "Export DOCX"}
@@ -337,12 +337,12 @@ function EvidenceComparatorPage() {
 
         ) : (
           status !== "loading" && (
-            <div className="rounded-[32px] border-2 border-dashed border-slate-200 bg-white/50 py-24 text-center shadow-sm">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-50 text-slate-300 border border-slate-100">
+            <div className="rounded-[32px] border-2 border-dashed border-line bg-panel py-24 text-center shadow-sm">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-canvas text-muted border border-line">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
               </div>
-              <h3 className="text-xl font-bold text-slate-800">No Synthesis Findings</h3>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-7 text-slate-500 font-medium">
+              <h3 className="text-xl font-bold text-ink">No Synthesis Findings</h3>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-7 text-muted font-medium">
                 Supply summaries for at least two research papers above and click analyze to generate synthesis patterns.
               </p>
             </div>

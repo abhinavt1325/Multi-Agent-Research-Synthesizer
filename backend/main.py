@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ssl  # Fix SSL certificate verification on Python 3.14 / Windows
+ssl._create_default_https_context = ssl._create_unverified_context  # type: ignore[attr-defined]
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

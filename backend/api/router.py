@@ -15,6 +15,7 @@ try:
     from backend.agents.paper_reader import PaperReaderServiceError, run_paper_reader
     from backend.agents.planner_agent import PlannerAgentServiceError, run_planner_agent
     from backend.agents.literature_hunter import LiteratureHunterServiceError, run_literature_hunter
+    from backend.agents.research_orchestrator import OrchestratorError, run_research_orchestrator
     from backend.config.settings import get_settings
     from backend.neo4j.queries import GraphQueryError, fetch_graph_data, fetch_recent_papers, fetch_graph_summary_counts, restore_legacy_data_to_user, delete_paper
     from backend.services.export_utils import (
@@ -26,6 +27,8 @@ try:
         generate_full_planner_docx,
         generate_full_planner_pdf,
         generate_research_summary_pdf,
+        generate_academic_pdf,
+        generate_academic_docx,
     )
 except ModuleNotFoundError:  # pragma: no cover - supports execution from backend/
     from agents.research_gap import ResearchGapServiceError, run_research_gap
@@ -34,6 +37,7 @@ except ModuleNotFoundError:  # pragma: no cover - supports execution from backen
     from agents.paper_reader import PaperReaderServiceError, run_paper_reader
     from agents.planner_agent import PlannerAgentServiceError, run_planner_agent
     from agents.literature_hunter import LiteratureHunterServiceError, run_literature_hunter
+    from agents.research_orchestrator import OrchestratorError, run_research_orchestrator
     from config.settings import get_settings
     from neo4j.queries import GraphQueryError, fetch_graph_data, fetch_recent_papers, fetch_graph_summary_counts, restore_legacy_data_to_user, delete_paper
     from services.export_utils import (
@@ -45,6 +49,8 @@ except ModuleNotFoundError:  # pragma: no cover - supports execution from backen
         generate_full_planner_docx,
         generate_full_planner_pdf,
         generate_research_summary_pdf,
+        generate_academic_pdf,
+        generate_academic_docx,
     )
 
 
@@ -1029,7 +1035,7 @@ async def dashboard_summary(user_email: str = "") -> DashboardSummaryResponse:
         provider
         for provider, configured in (
             ("groq", settings.groq_api_key),
-            ("gemini", settings.gemini_api_key),
+            ("gemini", settings.has_gemini_api_key),
         )
         if configured
     ]
@@ -1273,3 +1279,137 @@ def forgot_password(data: dict = Body(...)):
     # With Firebase integration, the frontend will handle the email sending.
     # This endpoint can now be used for validation or logging if needed.
     return {"message": "Firebase handling password reset email."}
+
+
+# ─── Smart Researcher ─────────────────────────────────────────────────────────
+
+class ResearchReportRequest(BaseModel):
+    topic: str = Field(..., min_length=1, description="Research topic to run the full Smart Researcher pipeline on.")
+
+
+class ResearchReportPaperSummary(BaseModel):
+    title: str
+    year: int | None = None
+    authors: list[str] = Field(default_factory=list)
+    source: str = ""
+    url: str | None = None
+    objective: str = ""
+    method: str = ""
+    finding: str = ""
+    limitation: str = ""
+
+
+class ResearchReportLiteratureItem(BaseModel):
+    title: str
+    abstract: str = ""
+    year: int | None = None
+    authors: list[str] = Field(default_factory=list)
+    url: str | None = None
+    source: str = ""
+
+
+class ResearchReportEvidenceComparison(BaseModel):
+    common_evidence: list[str] = Field(default_factory=list)
+    consensus_trends: list[str] = Field(default_factory=list)
+    differing_datasets: list[str] = Field(default_factory=list)
+    evidence_clusters: list[str] = Field(default_factory=list)
+
+
+class ResearchReportContradictions(BaseModel):
+    contradiction_found: bool
+    explanation: str
+    conflicting_statements: list[str] = Field(default_factory=list)
+    confidence_level: str
+    conflict_level: str = "low"
+
+
+class ResearchReportGaps(BaseModel):
+    high_priority: list[str] = Field(default_factory=list)
+    medium_priority: list[str] = Field(default_factory=list)
+    emerging: list[str] = Field(default_factory=list)
+    identified_gaps: list[str] = Field(default_factory=list)
+    underexplored_areas: list[str] = Field(default_factory=list)
+
+
+class ResearchReportPipelineMetadata(BaseModel):
+    papers_found: int
+    papers_analyzed: int
+    providers_used: list[str] = Field(default_factory=list)
+
+
+class ResearchReportResponse(BaseModel):
+    topic: str
+    provider: str
+    confidence_score: int = 0
+    dominant_domain: str = ""
+    executive_summary: str
+    key_findings: list[str] = Field(default_factory=list)
+    paper_summaries: list[ResearchReportPaperSummary] = Field(default_factory=list)
+    literature_overview: list[ResearchReportLiteratureItem] = Field(default_factory=list)
+    methods_landscape: list[str] = Field(default_factory=list)
+    evidence_comparison: ResearchReportEvidenceComparison
+    contradictions_found: ResearchReportContradictions
+    research_gaps: ResearchReportGaps
+    recommended_next_direction: str = ""
+    future_research_directions: list[str] = Field(default_factory=list)
+    pipeline_metadata: ResearchReportPipelineMetadata
+
+
+@api_router.post("/research-report", response_model=ResearchReportResponse)
+async def smart_researcher_endpoint(request: ResearchReportRequest) -> ResearchReportResponse:
+    """Run the full Smart Researcher pipeline and return a unified research report."""
+    try:
+        result = run_research_orchestrator(request.topic)
+    except OrchestratorError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return ResearchReportResponse(**result)
+
+
+class AcademicExportRequest(BaseModel):
+    topic: str
+    report_data: dict[str, Any]
+
+@api_router.post("/research-report/export/pdf")
+async def smart_researcher_export_pdf(request: AcademicExportRequest) -> Response:
+    """Export a Smart Researcher report as formal Academic PDF."""
+    try:
+        try:
+            from backend.services.academic_export import generate_academic_report_text
+        except ModuleNotFoundError:  # pragma: no cover - supports execution from backend/
+            from services.academic_export import generate_academic_report_text
+        academic_text = generate_academic_report_text(request.topic, request.report_data)
+        pdf_content = generate_academic_pdf(topic=request.topic, academic_text=academic_text)
+        filename = build_named_export_filename("academic-report", request.topic, "pdf")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.post("/research-report/export/docx")
+async def smart_researcher_export_docx(request: AcademicExportRequest) -> Response:
+    """Export a Smart Researcher report as formal Academic DOCX."""
+    try:
+        try:
+            from backend.services.academic_export import generate_academic_report_text
+        except ModuleNotFoundError:  # pragma: no cover - supports execution from backend/
+            from services.academic_export import generate_academic_report_text
+        academic_text = generate_academic_report_text(request.topic, request.report_data)
+        docx_content = generate_academic_docx(topic=request.topic, academic_text=academic_text)
+        filename = build_named_export_filename("academic-report", request.topic, "docx")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return Response(
+        content=docx_content,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -5,17 +5,15 @@
 @tailwind utilities;
 
 :root {
-  --canvas-bg: #f5f5f4;
-  --ink-primary: #111827;
+  --canvas-bg: #0B1220;
+  --ink-primary: #f8fafc;
   --accent-pink: 236 72 153; /* Pink-500 */
 }
 
 html {
   height: 100%;
   scroll-behavior: smooth;
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.88), rgba(245, 245, 244, 0.94) 42%, rgba(231, 229, 228, 0.86)),
-    linear-gradient(180deg, #fafaf9 0%, #f5f5f4 100%);
+  background: var(--canvas-bg);
 }
 
 body {
@@ -59,14 +57,14 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(17, 24, 39, 0.1);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(17, 24, 39, 0.2);
+  background: rgba(255, 255, 255, 0.2);
   background-clip: content-box;
 }
 

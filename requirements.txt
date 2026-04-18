@@ -1,10 +1,11 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pydantic
+pydantic-settings
 python-dotenv
 neo4j
 chromadb
 requests
 aiohttp
 python-multipart
-# Add other specific dependencies if needed
+httpx

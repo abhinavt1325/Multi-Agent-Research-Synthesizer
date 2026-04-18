@@ -12,6 +12,8 @@ import PaperReaderPage from "./pages/PaperReaderPage";
 import PlannerPage from "./pages/PlannerPage";
 import ResearchGapPage from "./pages/ResearchGapPage";
 import SignupPage from "./pages/SignupPage";
+import LandingPage from "./pages/LandingPage";
+import SmartResearcherPage from "./pages/SmartResearcherPage";
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AuthenticatedShell />}>
+          <Route path="/smart-researcher" element={<SmartResearcherPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/planner" element={<PlannerPage />} />
           <Route path="/paper-reader" element={<PaperReaderPage />} />
@@ -31,7 +34,7 @@ function App() {
           <Route path="/graph-explorer" element={<GraphExplorerPage />} />
         </Route>
       </Route>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
